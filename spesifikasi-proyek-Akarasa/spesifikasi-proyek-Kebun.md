@@ -1,4 +1,4 @@
-# SPESIFIKASI PROYEK — "KampusLMS"
+# SPESIFIKASI PROYEK — "KebunTOGA"
 
 **Mata Kuliah:** Inovasi Sosial (3 SKS, Semester 5)
 **Lokasi:** Kecamatan Balikpapan Timur, Kelurahan Lamaru, RT 19
@@ -34,11 +34,11 @@ Kebun TOGA dirancang untuk mengubah informasi perawatan tanaman menjadi panduan 
 | No. | Problem | Impact |
 | --- | ------- | ------ |
 | 1 | Pengguna tidak mengetahui kebutuhan perawatan masing-masing tanaman | Perawatan dapat dilakukan terlalu sering atau terlalu jarang |
-| 1 | Pengguna dapat lupa melakukan penyiraman | Tanaman berisiko tidak mendapatkan perawatan secara konsisten |
-| 1 | Informasi perawatan tersebar di berbagai sumber | Pengguna harus mencari informasi sendiri |
-| 1 | Pengguna sulit mengetahui perkembangan tanaman | Sulit mengetahui apakah tanaman berada pada tahap pertumbuhan yang sesuai |
-| 1 | Pengguna tidak mengetahui estimasi waktu panen/pemanfaatan | Ekspektasi terhadap hasil tanaman menjadi tidak jelas |
-| 1 | Tidak ada pencatatan tanaman yang dimiliki | Pengguna sulit memantau beberapa tanaman sekaligus |
+| 2 | Pengguna dapat lupa melakukan penyiraman | Tanaman berisiko tidak mendapatkan perawatan secara konsisten |
+| 3 | Informasi perawatan tersebar di berbagai sumber | Pengguna harus mencari informasi sendiri |
+| 4 | Pengguna sulit mengetahui perkembangan tanaman | Sulit mengetahui apakah tanaman berada pada tahap pertumbuhan yang sesuai |
+| 5 | Pengguna tidak mengetahui estimasi waktu panen/pemanfaatan | Ekspektasi terhadap hasil tanaman menjadi tidak jelas |
+| 6 | Tidak ada pencatatan tanaman yang dimiliki | Pengguna sulit memantau beberapa tanaman sekaligus |
 
 ### Sasaran Pengguna:
 #### Primary Users
@@ -361,109 +361,108 @@ Sistem harus:
 
 ```mermaid
 erDiagram
-    users ||--o{ course_user : "terdaftar"
-    users ||--o{ courses : "mengajar"
-    users ||--o{ submissions : "mengumpulkan"
-    users ||--o{ materials : "mengunggah"
-    users ||--o{ notifications : "menerima"
+    users ||--o{ penanam : "mengelola"
+    
+    penanam ||--o{ tanaman_ditanam : "memiliki"
+    tanaman ||--o{ tanaman_ditanam : "ditanam oleh"
 
-    courses ||--o{ course_user : "punya peserta"
-    courses ||--o{ materials : "punya"
-    courses ||--o{ assignments : "punya"
+    tanaman ||--o{ aturan_perawatan : "memiliki aturan"
+    aturan_perawatan ||--o{ jadwal_perawatan : "menghasilkan"
 
-    assignments ||--o{ submissions : "dikumpulkan"
-    submissions ||--o| grades : "dinilai"
-    users ||--o{ grades : "memberi nilai"
+    tanaman_ditanam ||--o{ jadwal_perawatan : "memiliki jadwal"
+
+    jadwal_perawatan ||--o| aktivitas_perawatan : "dicatat" 
+    tanaman_ditanam ||--o{ aktivitas_perawatan : "memiliki riwayat"
+    
+    tanaman_ditanam ||--o{ panen : "menghasilkan"
 
     users {
         bigint id PK
-        string name
+        string nama
         string email UK
-        string password
-        enum role "admin|dosen|mahasiswa"
-        string nim_nip UK "nullable"
-        timestamp email_verified_at
+        String password
+        timestamp email_verified_at "nullable"
+        timestamps created_updated
+    }
+
+    penanam {
+        bigint id PK
+        string nama
+        string phone "nullable"
+        text catatan "nullable"
+        bigint created_by FK "users.id, nullable"
+        timestamps created_updated
+    }
+
+    tanaman {
+        bigint id PK
+        string nama UK
+        string nama_ilmiah "nullable"
+        string kategori
+        text deskripsi "nullable"
+        text manfaat "nullable"
+        text panduan_penanaman "nullable"
+        text panduan_perawatan "nullable"
+        string kebutuhan_cahaya
+        string kebutuhan_air
+        unsignedsmallint min_hari_panen "nullable"
+        unsignedsmallint max_hari_panen "nullable"
+        boolean is_active "default true"
         timestamps created_updated
         softdeletes deleted_at
     }
 
-    courses {
+    aturan_perawatan {
         bigint id PK
-        string code UK "contoh SI2514024"
-        string name
-        text description
-        tinyint sks
-        bigint lecturer_id FK "users.id"
-        enum status "draft|active|archived"
+        bigint tanaman_id FK
+        string nama
+        enum type "penyiraman|pemupukan|pemangkasan|inspeksi|lainnya"
+        text instruksi "nullable"
+        unsignedsmallint interval_days "nullable"
+        unsignedsmallint mulai_setelah_hari "nullable"
+        unsignedsmallint berakhir_setelah_hari "nullable"
+        boolean is_active "default true"
         timestamps created_updated
     }
 
-    course_user {
+    tanaman_ditanam {
         bigint id PK
-        bigint course_id FK
-        bigint user_id FK
-        timestamp enrolled_at
+        bigint penanam_id FK
+        bigint tanaman_id FK
+        date ditanam_at
+        unsignedinteger quantity "default 1"
+        string location "nullable"
+        text catatan "nullable"
+        enum status "bertumbuh|dipanen|mati"
         timestamps created_updated
     }
 
-    materials {
+
+    jadwal_perawatan {
         bigint id PK
-        bigint course_id FK
-        bigint uploaded_by FK "users.id"
-        string title
-        text description
-        enum type "file|link"
-        string file_path "nullable"
-        string original_name "nullable"
-        unsignedbigint file_size "nullable"
-        string mime_type "nullable"
-        string external_url "nullable"
+        bigint tanaman_ditanam_id FK
+        bigint aturan_perawatan_id FK
+        date perawatan_at
+        enum status "pending|completed|missed"
         timestamps created_updated
     }
 
-    assignments {
+    aktivitas_perawatan {
         bigint id PK
-        bigint course_id FK
-        bigint created_by FK "users.id"
-        string title
-        text instructions
-        datetime due_at
-        unsignedtinyint max_score "default 100"
-        boolean allow_late "default true"
-        enum status "draft|published"
+        bigint tanaman_ditanam_id FK
+        bigint jadwal_perawatan_id FK "nullable"
+        data performed_at
+        text catatan "nullable"
         timestamps created_updated
     }
 
-    submissions {
+    panen {
         bigint id PK
-        bigint assignment_id FK
-        bigint user_id FK
-        string file_path
-        string original_name
-        unsignedbigint file_size
-        text note "nullable"
-        datetime submitted_at
-        boolean is_late "default false"
-        timestamps created_updated
-    }
-
-    grades {
-        bigint id PK
-        bigint submission_id FK "unique - 1 submission 1 nilai"
-        bigint graded_by FK "users.id"
-        decimal score
-        text feedback "nullable"
-        datetime graded_at
-        timestamps created_updated
-    }
-
-    notifications {
-        uuid id PK
-        string type
-        string notifiable_type
-        bigint notifiable_id
-        text data
-        timestamp read_at
+        bigint tanaman_ditanam_id FK
+        date dipanen_at
+        decimal quantity "nullable"
+        string unit "nullable"
+        text catatan "nullable"
         timestamps created_updated
     }
 ```
@@ -472,83 +471,105 @@ erDiagram
 
 | Tabel | Ketentuan |
 |-------|-----------|
-| `users` | `email` unique; `nim_nip` unique nullable; index pada `role` |
-| `courses` | `code` unique; FK `lecturer_id` → `users.id` `restrictOnDelete` |
-| `course_user` | **unique composite** (`course_id`, `user_id`) — cegah enroll ganda |
-| `materials` | FK `course_id` `cascadeOnDelete`; index `course_id` |
-| `assignments` | FK `course_id` `cascadeOnDelete`; index (`course_id`, `due_at`) |
-| `submissions` | **unique composite** (`assignment_id`, `user_id`) — 1 mahasiswa 1 submission aktif |
-| `grades` | `submission_id` **unique** — relasi one-to-one |
+| `users` | `email` UNIQUE; `nim_nip` UNIQUE nullable; tidak ada `role` |
+| `penanam` | FK `tanaman_tanaman.penanam_id` `restrictOnDelete`; nama tanaman: UNIQUE |
+| `tanaman` | FK `tanaman_tanaman.tanaman_id`, `aturan_perawatan.tanaman_id` |
+| `tanaman_ditanam` | FK `jadwal_perawatan.tanaman_ditanam_id` `aktivitas_perawatan.tanaman_ditanam_id` `panen.tanaman_ditanam_id` `cascadeOnDelete`; Index: `tanaman_tanaman(penanam_id)`, `tanaman_tanaman(tanaman_id)` |
+| `aturan_perawatan` | FK `jadwal_perawatan.aturan_perawatan_id`; index: `aturan_perawatan(tanaman_id)` |
+| `jadwal_perawatan` | UNIQUE(`tanaman_ditanam_id`, `aturan_perawatan_id`, `perawatan_at`); index: `jadwal_perawatan(tanaman_ditanam_id)`, `jadwal_perawatan(aturan_perawatan_id)`, `jadwal_perawatan(perawatan_at)` |
+| `aktivitas_perawatan` | index: `aktivitas_perawatan(tanaman_ditanam_id)`, `aktivitas_perawatan(performed_at)` |
+| `panen` | index: `panen(tanaman_ditanam_id)`, `panen(dipanen_at)` |
 
-Semua migrasi **wajib reversible** (`down()` benar-benar mengembalikan keadaan). Ini diuji.
+Semua migrasi **wajib reversible** (`down()` benar-benar mengembalikan keadaan). Dan sepertinya perlu diperbaiki mengenai banyak kode yang pakai **tanaman**
 
 ### 4.3 Relasi Eloquent yang Diharapkan
 
 Nama method relasi ikut ditetapkan, karena dipakai di modul, di soal interview, dan di skrip pengujian.
 
 ```
-User      : taughtCourses()  hasMany(Course, 'lecturer_id')
-            courses()        belongsToMany(Course)->withPivot('enrolled_at')->withTimestamps()
-            submissions()    hasMany(Submission)
-            gradesGiven()    hasMany(Grade, 'graded_by')
+User              : hasMany(Penanam::class, 'created_by')
 
-Course    : lecturer()       belongsTo(User, 'lecturer_id')
-            students()       belongsToMany(User)->withPivot('enrolled_at')->withTimestamps()
-            materials()      hasMany(Material)
-            assignments()    hasMany(Assignment)
+Penanam           : belongsTo(User::class, 'created_by')
+                    hasMany(TanamanDitanam::class)
 
-Assignment: course()         belongsTo(Course)
-            submissions()    hasMany(Submission)
-            grades()         hasManyThrough(Grade, Submission)
+Tanaman           : hasMany(TanamanDitanam::class)
+                    asMany(AturanPerawatan::class)
 
-Submission: assignment()     belongsTo(Assignment)
-            student()        belongsTo(User, 'user_id')
-            grade()          hasOne(Grade)
+TanamanDitanam   : belongsTo(Penanam::class)       belongsTo(Tanaman::class)
+                    hasMany(JadwalPerawatan::class)    hasMany(AktivitasPerawatan::class)
+                    hasMany(Panen::class)
 
-Grade     : submission()     belongsTo(Submission)
-            grader()         belongsTo(User, 'graded_by')
+AturanPerawatan  : belongsTo(Tanaman::class) hasMany(JadwalPerawatan::class)
+
+JadwalPerawatan  : belongsTo(TanamanDitanam::class) belongsTo(AturanPerawatan::class)
+                    hasOne(AktivitasPerawatan::class)
+
+AktivitasPerawatan: belongsTo(TanamanDitanam::class) belongsTo(JadwalPerawatan::class)
+
+Panen             : belongsTo(TanamanDitanam::class)
+ 
 ```
-
-⚠️ Perhatikan `->withPivot('enrolled_at')`. Tanpa itu kolom `enrolled_at` yang diwajibkan pada tabel `course_user` tidak akan pernah terbaca maupun terisi lewat relasi — dan ini termasuk yang diperiksa saat penilaian Tugas 1.
 
 ---
 
 ## 5. Kontrak API (WAJIB — dipakai mulai minggu 6)
 
-Prefix `/api/v1`. Autentikasi: Laravel Sanctum (Bearer token). Semua response dibungkus API Resource.
+Prefix `/api/v1`. Semua response dibungkus API Resource.
 
-| Method | Endpoint | Akses | Keterangan |
-|--------|----------|-------|------------|
-| POST | `/auth/login` | publik | mengembalikan token |
-| POST | `/auth/logout` | auth | |
-| GET | `/me` | auth | profil + role |
-| GET | `/courses` | auth | dosen: MK yang diajar; mahasiswa: MK yang diikuti |
-| GET | `/courses/{id}` | auth+scope | detail + jumlah materi/tugas |
-| GET | `/courses/{id}/materials` | auth+scope | |
-| GET | `/courses/{id}/assignments` | auth+scope | mendukung `?status=`, `?page=` |
-| POST | `/assignments` | dosen | |
-| PUT/PATCH | `/assignments/{id}` | dosen (pemilik) | |
-| DELETE | `/assignments/{id}` | dosen (pemilik) | |
-| GET | `/assignments/{id}/submissions` | dosen (pemilik) | |
-| POST | `/assignments/{id}/submissions` | mahasiswa (terdaftar) | multipart, `file` |
-| PUT | `/submissions/{id}/grade` | dosen (pemilik) | `score`, `feedback` — *upsert*, aman dipanggil berulang |
-| GET | `/notifications` | auth | |
-| POST | `/notifications/{id}/read` | auth | |
+| Method | Endpoint | Keterangan |
+|--------|----------|------------|
+| GET | `/tanaman` | Daftar tanaman |
+| GET | `/tanaman/{tanaman}` | Detail tanaman |
+| GET | `/penanam` | Daftar penanam |
+| POST | `/tanaman-tanaman` | Menambahkan tanaman |
+| GET | `/penamans/{penanam}/garden` | Melihat kebun |
+| GET | `/penamans/{penanam}/perawatan` | Melihat jadwal |
+| GET | `/jadwal-perawatan/{perawatan}/complete` | Menyelesaikan perawatan |
+| CRUD | `/admin/tanaman` | Kelola tanaman |
+| CRUD | `/admin/penamans` | Kelola penanam |
+| CRUD | `/admin/aturan-perawatan` | Kelola aturan perawatan |
+| GET | `/admin/tanaman-tanaman` | Melihat seluruh tanaman |
+| GET | `/admin/jadwal-perawatan` | Monitoring jadwal |
 
 **Format response wajib:**
 
 ```json
 // sukses (koleksi)
-{ "data": [ ... ], "meta": { "current_page": 1, "last_page": 5, "total": 47 } }
+{
+    "data": {
+        "id": 1,
+        "name": "Jahe"
+    },
+    "message": "Data tanaman berhasil diambil."
+}
 
 // sukses (tunggal)
 { "data": { ... } }
 
-// error validasi — 422
-{ "message": "Data yang diberikan tidak valid.", "errors": { "score": ["..."] } }
+// untuk collection
+{
+    "data": [
+        {
+            "id": 1,
+            "name": "Jahe"
+        },
+        {
+            "id": 2,
+            "name": "Kunyit"
+        }
+    ]
+}
 
-// tidak berhak — 403
-{ "message": "Anda tidak memiliki akses ke sumber daya ini." }
+// error validasi — 422
+{
+    "message": "Data yang diberikan tidak valid.",
+    "errors": {
+        "tanaman_at": [
+            "..."
+        ]
+    }
+}
+
 ```
 
 
@@ -558,7 +579,7 @@ Prefix `/api/v1`. Autentikasi: Laravel Sanctum (Bearer token). Semua response di
 
 | Ketentuan |
 |-----------|
-| Kelompok memilih **satu** jalur dan mendaftarkannya: (a) tetap Blade, (b) Blade + Livewire 3, (c) Inertia 2 + Vue/React/Svelte, (d) SPA terpisah yang mengonsumsi REST API di Bagian 5. |
+| **Blade + Livewire 3** karena: aplikasi cukup CRUD-oriented; interaksi utamanya berupa form, filter, dashboard, dan jadwal; tidak membutuhkan SPA kompleks;|
 
 ---
 
@@ -566,13 +587,122 @@ Prefix `/api/v1`. Autentikasi: Laravel Sanctum (Bearer token). Semua response di
 
 Sebuah fitur baru dianggap selesai jika **seluruhnya** terpenuhi:
 
-- [ ] Berjalan sesuai spesifikasi pada data seeder
-- [ ] Validasi ada di **server-side** (bukan hanya di frontend)
-- [ ] Otorisasi diterapkan — diuji dengan mencoba mengakses via URL/ID milik pengguna lain
-- [ ] Tidak ada N+1 query (diverifikasi lewat Debugbar/Telescope)
-- [ ] Ada minimal 1 feature test untuk jalur sukses dan 1 untuk jalur gagal/ditolak
-- [ ] Sudah melalui Pull Request dan direview minimal 1 anggota lain
-- [ ] Anggota yang menulisnya **mampu menjelaskan seluruh barisnya**
+
+1. Katalog tanaman TOGA
+- [ ]  Data tanaman tampil sesuai spesifikasi dan data seeder.
+- [ ]  Pengguna dapat melihat daftar tanaman.
+- [ ]  Pengguna dapat mencari tanaman berdasarkan nama.
+- [ ]  Filter kategori berjalan jika diterapkan.
+- [ ]  Detail tanaman dapat dibuka berdasarkan ID/slug.
+- [ ]  Data yang ditampilkan berasal dari database, bukan hardcode.
+- [ ]  Tanaman yang berstatus is_active = false tidak tampil di halaman publik.
+- [ ]  Tanaman yang di- [ ] soft- [ ] delete tidak tampil di halaman publik.
+- [ ]  Jika tanaman tidak ditemukan, sistem menampilkan 404 yang sesuai.
+- [ ]  Query database menggunakan relasi/Eloquent yang sesuai dan tidak menghasilkan query berlebihan yang tidak perlu
+
+2. Detail dan panduan TOGA
+- [ ]  Informasi dasar tanaman tampil dengan benar.
+- [ ]  Panduan penanaman tersedia.
+- [ ]  Panduan perawatan tersedia.
+- [ ]  Kebutuhan cahaya dan air tampil.
+- [ ]  Estimasi waktu panen ditampilkan sebagai rentang, bukan tanggal pasti.
+- [ ]  Data nullable ditangani dengan baik jika informasi tertentu tidak tersedia.
+- [ ]  Tidak ada informasi yang berasal dari hardcode apabila datanya seharusnya berasal dari plants.
+
+3. Manajemen penanaman
+- [ ]  Pengguna dapat menambahkan tanaman yang ditanam.
+- [ ]  penanam_id, plant_id, dan planted_at wajib divalidasi.
+- [ ]  quantity harus bernilai valid, minimal 1.
+- [ ]  plant_id harus benar- [ ] benar merujuk ke tanaman yang tersedia.
+- [ ]  Validasi dilakukan di server- [ ] side, bukan hanya frontend.
+- [ ]  Data tersimpan ke planted_plants.
+- [ ]  Tanaman yang ditambahkan muncul pada kebun penanam yang sesuai.
+- [ ]  Tanggal penanaman digunakan sebagai dasar perhitungan jadwal dan estimasi panen.
+- [ ]  Data yang tidak valid tidak dapat dimasukkan dengan manipulasi request langsung.
+
+4. Dashboard Kebun
+- [ ]  Pengguna dapat memilih/mencari penanam.
+- [ ]  Tanaman milik penanam tersebut ditampilkan.
+- [ ]  Tanaman milik penanam lain tidak tercampur.
+- [ ]  Jadwal perawatan hari ini ditampilkan.
+- [ ]  Tanaman yang mendekati estimasi panen ditampilkan.
+- [ ]  Status tanaman (growing, harvested, dead) ditampilkan secara konsisten.
+- [ ]  Dashboard menggunakan data database aktual.
+- [ ]  Kondisi tanpa tanaman ditangani dengan empty state.
+
+5. Jadwal perawatan
+- [ ]  Jadwal dibuat berdasarkan care_rules tanaman.
+- [ ]  Jadwal menggunakan tanggal penanaman sebagai dasar perhitungan.
+- [ ]  Jenis perawatan tampil dengan benar.
+- [ ]  Instruksi perawatan tampil sesuai aturan tanaman.
+- [ ]  Status jadwal (pending, completed, missed) berjalan sesuai aturan.
+- [ ]  Jadwal tidak dibuat dua kali untuk kombinasi tanaman + aturan + tanggal yang sama.
+- [ ]  Jadwal tanaman yang sudah harvested atau dead tidak menghasilkan jadwal perawatan baru.
+- [ ]  Pengguna dapat melihat jadwal berdasarkan tanggal.
+- [ ]  Validasi dilakukan server- [ ] side.
+
+6. Menandai perawatan selesai
+- [ ]  Pengguna dapat menandai jadwal sebagai selesai.
+- [ ]  Hanya jadwal yang valid yang dapat diselesaikan.
+- [ ]  Status berubah dari pending menjadi completed.
+- [ ]  Sistem mencatat aktivitas ke care_logs.
+- [ ]  performed_at tercatat.
+- [ ]  Pengguna tidak dapat menyelesaikan jadwal yang sudah completed secara berulang sehingga menghasilkan log duplikat.
+- [ ]  Endpoint tidak dapat digunakan untuk memanipulasi jadwal milik penanam lain secara sembarangan.
+- [ ]  Validasi dan pengecekan kepemilikan dilakukan di server- [ ] side.
+
+7. Estimasi panen
+- [ ]  Estimasi dihitung berdasarkan planted_at.
+- [ ]  harvest_min_days digunakan untuk tanggal minimum.
+- [ ]  harvest_max_days digunakan untuk tanggal maksimum.
+- [ ]   Sistem menampilkan rentang tanggal, misalnya 10 Januari – 25 Januari.
+- [ ]  Jika data estimasi tidak tersedia, sistem tidak membuat tanggal palsu.
+- [ ]  Estimasi berubah otomatis jika planted_at berbeda.
+- [ ]  Estimasi bukan dianggap sebagai tanggal panen pasti.
+
+8. Pencatatan panen
+- [ ]  Pengguna/admin dapat mencatat hasil panen.
+- [ ]  harvested_at divalidasi.
+- [ ]  quantity dan unit ditangani dengan benar jika diisi.
+- [ ]  Data tersimpan pada harvests.
+- [ ]  Tanaman yang telah dipanen dapat berubah status menjadi harvested sesuai business logic.
+- [ ]  Setelah dipanen, jadwal perawatan berikutnya tidak terus dibuat.
+- [ ]  Riwayat panen dapat ditampilkan pada tanaman yang bersangkutan.
+
+9. Admin
+- [ ]  Admin dapat login menggunakan akun yang valid.
+- [ ]  Login gagal jika kredensial salah.
+- [ ]  Password disimpan dalam bentuk hash.
+- [ ]  Halaman /admin/* tidak dapat diakses tanpa autentikasi.
+- [ ]  Pengguna yang belum login diarahkan ke halaman login.
+- [ ]  Logout bekerja.
+- [ ]  Session authentication berjalan dengan benar.
+- [ ]  Endpoint admin juga dilindungi server- [ ] side, bukan hanya disembunyikan dari UI.
+- [ ]  Admin dapat melakukan CRUD tanaman, penanam, aturan perawatan
+
+10. API
+- [ ]  Semua endpoint mengembalikan HTTP status code yang sesuai.
+- [ ]  Response menggunakan format API yang telah ditentukan.
+- [ ]  Validation error memiliki struktur errors.
+- [ ]  Endpoint admin dilindungi authentication/authorization.
+- [ ]  ID resource yang tidak valid menghasilkan 404.
+- [ ]  Request tidak valid menghasilkan 422.
+- [ ]  Endpoint tidak menerima field yang tidak seharusnya dapat diubah.
+- [ ]  Tidak ada mass assignment vulnerability.
+- [ ]  Endpoint yang mengubah data menggunakan HTTP method yang sesuai (POST, PATCH, DELETE).
+- [ ]  Endpoint sensitif tidak hanya mengandalkan validasi frontend.
+
+11. Seeder dan data awal
+- [ ]  DatabaseSeeder dapat dijalankan dari database kosong.
+- [ ]  Seeder menghasilkan data yang cukup untuk menguji seluruh fitur utama.
+- [ ]  Terdapat minimal satu akun admin.
+- [ ]  Terdapat beberapa tanaman.
+- [ ]  Terdapat beberapa aturan perawatan.
+- [ ]  Terdapat beberapa penanam.
+- [ ]  Terdapat beberapa tanaman yang sudah ditanam.
+- [ ]  Terdapat data yang memungkinkan pengujian jadwal dan estimasi panen.
+- [ ]  php artisan migrate:fresh - [ ] - [ ] seed berhasil tanpa error.
+- [ ]  Aplikasi dapat digunakan dari kondisi database kosong setelah migration + seeder.
 
 ---
 
