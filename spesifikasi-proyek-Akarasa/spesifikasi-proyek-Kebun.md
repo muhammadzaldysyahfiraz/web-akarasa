@@ -583,7 +583,7 @@ Prefix `/api/v1`. Semua response dibungkus API Resource.
 
 ---
 
-## 9. Definition of Done per Fitur
+## 7. Definition of Done per Fitur
 
 Sebuah fitur baru dianggap selesai jika **seluruhnya** terpenuhi:
 
@@ -706,7 +706,7 @@ Sebuah fitur baru dianggap selesai jika **seluruhnya** terpenuhi:
 
 ---
 
-## 11. Lingkungan Pengembangan
+## 8. Lingkungan Pengembangan
 
 | Komponen | Ketentuan |
 |----------|-----------|
@@ -719,7 +719,7 @@ Sebuah fitur baru dianggap selesai jika **seluruhnya** terpenuhi:
 | Editor | bebas; disarankan VS Code + PHP Intelephense |
 | Deployment | lihat Bagian 11.1 |
 
-### 11.1 Deployment — dan biayanya
+### 8.1 Deployment — dan biayanya
 
 | Jalur | Biaya | Catatan |
 |-------|-------|---------|
