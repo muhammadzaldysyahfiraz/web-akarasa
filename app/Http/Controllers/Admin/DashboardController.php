@@ -16,13 +16,22 @@ class DashboardController extends Controller
     {
         return view('admin.dashboard', [
             'counts' => [
-                'tanaman' => Tanaman::count(),
+                'tanaman' => Tanaman::where('is_active', true)->count(),
                 'penanam' => Penanam::count(),
                 'ditanam' => TanamanDitanam::count(),
                 'jadwal' => JadwalPerawatan::where('status', 'pending')->count(),
                 'aturan' => AturanPerawatan::count(),
             ],
-            'upcoming' => JadwalPerawatan::with(['tanamanDitanam.tanaman', 'tanamanDitanam.penanam', 'aturanPerawatan'])
+            // Mengambil semua tanaman aktif
+            'featuredPlants' => Tanaman::where('is_active', true)
+                ->orderBy('nama')
+                ->get(),
+
+            'upcoming' => JadwalPerawatan::with([
+                    'tanamanDitanam.tanaman',
+                    'tanamanDitanam.penanam',
+                    'aturanPerawatan'
+                ])
                 ->where('status', 'pending')
                 ->orderBy('perawatan_at')
                 ->limit(8)

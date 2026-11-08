@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="bg-emerald-950 px-5 py-10 text-white sm:px-8 sm:py-14">
+    <section class="px-5 py-5 sm:px-8">
         <div class="mx-auto max-w-7xl">
-            <a href="{{ route('penanam.index') }}" class="text-sm font-semibold text-emerald-200 hover:text-white">← Ganti kebun</a>
+            <a href="{{ route('penanam.index') }}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">← Ganti kebun</a>
             <div class="mt-5 flex flex-wrap items-end justify-between gap-5">
-                <div><p class="text-sm font-bold uppercase tracking-[.16em] text-lime-300">Dashboard kebun</p><h1 class="mt-2 font-display text-4xl font-extrabold">{{ $penanam->nama }}</h1><p class="mt-2 text-emerald-100">{{ $plantings->count() }} kelompok tanaman tercatat</p></div>
-                <a href="{{ route('tanaman-ditanam.create') }}" class="rounded-full bg-lime-300 px-5 py-3 font-bold text-emerald-950 hover:bg-lime-200">+ Tambah tanaman</a>
+                <div><p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Dashboard kebun</p><h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">{{ $penanam->nama }}</h1><p class="mt-1 text-xs text-gray-500">{{ $plantings->count() }} kelompok tanaman tercatat</p></div>
+                <a href="{{ route('tanaman-ditanam.create') }}" class="rounded-lg bg-[#174638] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#285e50]">+ Tambah tanaman</a>
             </div>
         </div>
     </section>
@@ -23,7 +23,7 @@
             });
         @endphp
         @if ($nearHarvest->isNotEmpty())
-            <aside class="mb-7 rounded-3xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+            <aside class="mb-7 rounded-xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
                 <p class="text-xs font-bold uppercase tracking-[.16em] text-amber-800">Perkiraan hasil mendekat</p>
                 <h2 class="mt-1 font-display text-xl font-extrabold text-amber-950">Periksa tanaman yang memasuki rentang panen</h2>
                 <div class="mt-4 flex flex-wrap gap-3">
@@ -38,7 +38,7 @@
                 <p class="mt-3 text-xs text-amber-800">Rentang ini perkiraan, bukan kepastian panen.</p>
             </aside>
         @endif
-        <form method="GET" action="{{ route('kebun.show', $penanam) }}" class="mb-7 flex flex-wrap items-end gap-3 rounded-2xl border border-stone-200 bg-white p-4">
+        <form method="GET" action="{{ route('kebun.show', $penanam) }}" class="mb-7 flex flex-wrap items-end gap-3 rounded-xl border border-[#e2e8df] bg-white p-4 shadow-sm">
             <label class="text-sm font-bold text-stone-700">Filter jadwal berdasarkan tanggal
                 <input type="date" name="tanggal" value="{{ $selectedDate }}" class="mt-1 block rounded-xl border border-stone-300 px-4 py-2 font-normal">
             </label>
@@ -46,7 +46,7 @@
             @if ($selectedDate)<a href="{{ route('kebun.show', $penanam) }}" class="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-600">Hapus filter</a>@endif
         </form>
         @if ($plantings->isEmpty())
-            <div class="rounded-3xl border border-dashed border-stone-300 bg-white px-6 py-16 text-center">
+            <div class="rounded-xl border border-dashed border-stone-300 bg-white px-6 py-16 text-center">
                 <h2 class="font-display text-2xl font-bold text-emerald-950">Kebunmu masih kosong</h2>
                 <p class="mt-2 text-stone-500">Tambahkan tanaman pertama untuk mulai membuat jadwal perawatan.</p>
                 <a href="{{ route('tanaman-ditanam.create') }}" class="mt-6 inline-flex rounded-full bg-emerald-800 px-5 py-3 font-bold text-white">Tambah tanaman</a>
@@ -54,12 +54,12 @@
         @else
             <div class="space-y-7">
                 @foreach ($plantings as $planting)
-                    <article class="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
+                    <article class="overflow-hidden rounded-xl border border-[#e2e8df] bg-white shadow-sm">
                         <div class="grid gap-0 lg:grid-cols-[.8fr_1.2fr]">
                             <div class="bg-emerald-50 p-6 sm:p-8">
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
-                                        <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-800">{{ $planting->tanaman->kategori }}</span>
+                                        <span class="rounded-md bg-white px-3 py-1 text-xs font-bold text-emerald-800">{{ $planting->tanaman->kategori }}</span>
                                         <h2 class="mt-4 font-display text-2xl font-extrabold text-emerald-950">{{ $planting->tanaman->nama }}</h2>
                                         <p class="mt-1 text-sm text-stone-600">{{ $planting->quantity }} tanaman · ditanam {{ $planting->ditanam_at->format('d M Y') }}</p>
                                         @if ($planting->location)<p class="mt-1 text-sm text-stone-500">{{ $planting->location }}</p>@endif

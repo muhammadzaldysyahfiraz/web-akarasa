@@ -13,14 +13,26 @@ class Tanaman extends Model
     protected $table = 'tanaman';
 
     protected $fillable = [
-        'nama', 'nama_ilmiah', 'kategori', 'deskripsi', 'manfaat',
-        'panduan_penanaman', 'panduan_perawatan', 'kebutuhan_cahaya',
-        'kebutuhan_air', 'min_hari_panen', 'max_hari_panen', 'is_active',
+        'nama',
+        'nama_ilmiah',
+        'kategori',
+        'nama_penanam',
+        'deskripsi',
+        'manfaat',
+        'panduan_penanaman',
+        'panduan_perawatan',
+        'kebutuhan_cahaya',
+        'kebutuhan_air',
+        'min_hari_panen',
+        'max_hari_panen',
+        'is_active',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+        ];
     }
 
     public function tanamanDitanam(): HasMany

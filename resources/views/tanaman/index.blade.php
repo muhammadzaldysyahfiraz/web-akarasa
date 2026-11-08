@@ -1,14 +1,42 @@
-@extends('layouts.app')
+@extends('layouts.app', ['title' => 'Tanaman TOGA'])
 
 @section('content')
-    <section class="bg-emerald-950 px-5 py-12 text-white sm:px-8 sm:py-16">
-        <div class="mx-auto max-w-7xl">
-            <p class="text-sm font-bold uppercase tracking-[.16em] text-lime-300">Kenali tanaman TOGA</p>
-            <h1 class="mt-3 font-display text-4xl font-extrabold sm:text-5xl">Katalog tanaman</h1>
-            <p class="mt-4 max-w-2xl leading-7 text-emerald-100">Temukan panduan dasar, kebutuhan perawatan, dan perkiraan waktu pemanfaatan untuk tanaman di kebun rumah.</p>
+
+<main class="mx-auto max-w-[1400px] px-5 py-7 sm:px-8 lg:px-10 lg:py-8">
+
+    {{-- JUDUL HALAMAN --}}
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-[#64866C]">
+                Katalog Akarasa
+            </p>
+
+            <h1 class="mt-2 text-2xl font-semibold tracking-tight text-[#25463B] sm:text-[28px]">
+                TANAMAN OBAT KELUARGA
+            </h1>
+
+            <p class="mt-2 text-[11px] text-[#849187]">
+                Kenali berbagai tanaman TOGA beserta manfaat dan cara perawatannya.
+            </p>
         </div>
-    </section>
-    <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+
+        {{-- TAMBAH TANAMAN KE KEBUN WARGA --}}
+        @if (auth()->user()->role === 'user' && Route::has('tanaman-ditanam.create'))
+            <a
+                href="{{ route('tanaman-ditanam.create') }}"
+                class="inline-flex items-center gap-2 rounded-lg bg-[#17483B] px-4 py-3 text-[10px] font-bold text-white transition hover:bg-[#10372D]"
+            >
+                <span class="text-base leading-none">+</span>
+                Tanam di Kebun Saya
+            </a>
+        @endif
+    </div>
+
+    {{-- KATALOG TANAMAN --}}
+    <section>
         <livewire:tanaman-katalog />
     </section>
+
+</main>
+
 @endsection

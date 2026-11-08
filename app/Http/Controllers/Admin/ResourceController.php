@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AturanPerawatan;
+use App\Models\JadwalPerawatan;
 use App\Models\Penanam;
 use App\Models\Tanaman;
+use App\Models\TanamanDitanam;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,9 +27,89 @@ class ResourceController extends Controller
     public function index(string $resource): View
     {
         $config = $this->resource($resource);
-        $items = $config['model']::query()->latest()->paginate(15);
+        $items = $config['model']::query()
+            ->when($resource === 'aturan-perawatan', fn ($query) => $query->with('tanaman'))
+            ->latest()
+            ->paginate(15);
+
+        if ($resource === 'aturan-perawatan') {
+            return $this->scheduleCalendar($resource, $config, $items);
+        }
 
         return view('admin.resources.index', compact('resource', 'config', 'items'));
+    }
+
+    public function schedule(): View
+    {
+        return $this->index('aturan-perawatan');
+    }
+
+    private function scheduleCalendar(string $resource, array $config, $items): View
+    {
+        $filters = request()->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+            'location' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $selectedDate = isset($filters['tanggal'])
+            ? CarbonImmutable::parse($filters['tanggal'])
+            : (isset($filters['month'])
+                ? CarbonImmutable::parse($filters['month'].'-01')
+                : CarbonImmutable::today());
+        $monthStart = $selectedDate->startOfMonth();
+        $monthEnd = $monthStart->endOfMonth();
+        $calendarStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
+        $calendarDays = collect(range(0, 41))
+            ->map(fn (int $offset) => $calendarStart->addDays($offset));
+
+        $scheduleQuery = JadwalPerawatan::query()
+            ->with([
+                'tanamanDitanam.tanaman',
+                'tanamanDitanam.penanam',
+                'aturanPerawatan',
+                'aktivitasPerawatan',
+            ])
+            ->whereBetween('perawatan_at', [
+                $monthStart->toDateString(),
+                $monthEnd->toDateString(),
+            ]);
+
+        if (! empty($filters['location'])) {
+            $scheduleQuery->whereHas('tanamanDitanam', fn ($query) => $query
+                ->where('location', $filters['location']));
+        }
+
+        $monthSchedules = $scheduleQuery
+            ->orderBy('perawatan_at')
+            ->get();
+        $scheduleRouteName = request()->routeIs('admin.resources.index')
+            ? 'admin.resources.index'
+            : 'jadwal-perawatan.index';
+
+        return view('admin.resources.schedule', [
+            'resource' => $resource,
+            'config' => $config,
+            'items' => $items,
+            'selectedDate' => $selectedDate,
+            'monthStart' => $monthStart,
+            'calendarDays' => $calendarDays,
+            'schedulesByDate' => $monthSchedules->groupBy(
+                fn (JadwalPerawatan $schedule) => $schedule->perawatan_at->toDateString()
+            ),
+            'locations' => TanamanDitanam::query()
+                ->whereNotNull('location')
+                ->where('location', '!=', '')
+                ->distinct()
+                ->orderBy('location')
+                ->pluck('location'),
+            'selectedLocation' => $filters['location'] ?? '',
+            'canManage' => request()->user()?->role === 'admin',
+            'scheduleRouteName' => $scheduleRouteName,
+            'scheduleRouteParameters' => $scheduleRouteName === 'admin.resources.index'
+                ? ['resource' => $resource]
+                : [],
+        ]);
     }
 
     public function create(string $resource): View
@@ -86,6 +169,7 @@ class ResourceController extends Controller
         if ($resource === 'penamans') {
             $code = $data['access_code'] ?? null;
             unset($data['access_code']);
+
             if ($code) {
                 $data['access_code_hash'] = Hash::make($code);
             }
@@ -93,7 +177,9 @@ class ResourceController extends Controller
 
         $item->update($data);
 
-        return redirect()->route('admin.resources.index', $resource)->with('status', 'Data berhasil diperbarui.');
+        return redirect()
+            ->route('admin.resources.index', $resource)
+            ->with('status', 'Data berhasil diperbarui.');
     }
 
     public function destroy(string $resource, string $id): RedirectResponse
@@ -102,16 +188,21 @@ class ResourceController extends Controller
         $item = $config['model']::findOrFail($id);
 
         if ($item instanceof Penanam && $item->tanamanDitanam()->exists()) {
-            return back()->withErrors(['delete' => 'Penanam masih memiliki tanaman di kebunnya. Hapus tanaman tersebut terlebih dahulu.']);
+            return back()->withErrors([
+                'delete' => 'Penanam masih memiliki tanaman di kebunnya. Hapus tanaman tersebut terlebih dahulu.'
+            ]);
         }
 
         if ($item instanceof Tanaman && ($item->tanamanDitanam()->exists() || $item->aturanPerawatan()->exists())) {
             $item->update(['is_active' => false]);
+
             return back()->with('status', 'Tanaman masih memiliki riwayat; tanaman dinonaktifkan, bukan dihapus.');
         }
 
         if ($item instanceof AturanPerawatan && $item->jadwalPerawatan()->exists()) {
-            return back()->withErrors(['delete' => 'Aturan masih digunakan oleh jadwal perawatan.']);
+            return back()->withErrors([
+                'delete' => 'Aturan masih digunakan oleh jadwal perawatan.'
+            ]);
         }
 
         $item->delete();
@@ -130,9 +221,15 @@ class ResourceController extends Controller
     {
         return match ($resource) {
             'tanaman' => [
-                'nama' => ['required', 'string', 'max:255', Rule::unique('tanaman', 'nama')->ignore($item?->getKey())],
+                'nama' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('tanaman', 'nama')->ignore($item?->getKey()),
+                ],
                 'nama_ilmiah' => ['nullable', 'string', 'max:255'],
                 'kategori' => ['required', 'string', 'max:255'],
+                'nama_penanam' => ['nullable', 'string', 'max:255'],
                 'deskripsi' => ['nullable', 'string'],
                 'manfaat' => ['nullable', 'string'],
                 'panduan_penanaman' => ['nullable', 'string'],
@@ -140,23 +237,43 @@ class ResourceController extends Controller
                 'kebutuhan_cahaya' => ['required', 'string', 'max:255'],
                 'kebutuhan_air' => ['required', 'string', 'max:255'],
                 'min_hari_panen' => ['nullable', 'integer', 'min:0', 'max:65535'],
-                'max_hari_panen' => ['nullable', 'integer', 'gte:min_hari_panen', 'max:65535'],
+                'max_hari_panen' => [
+                    'nullable',
+                    'integer',
+                    'gte:min_hari_panen',
+                    'max:65535',
+                ],
                 'is_active' => ['sometimes', 'boolean'],
             ],
+
             'penamans' => [
                 'nama' => ['required', 'string', 'max:255'],
                 'phone' => ['nullable', 'string', 'max:255'],
                 'catatan' => ['nullable', 'string'],
-                'access_code' => [$item ? 'nullable' : 'required', 'string', 'min:8', 'max:128'],
+                'access_code' => [
+                    $item ? 'nullable' : 'required',
+                    'string',
+                    'min:8',
+                    'max:128',
+                ],
             ],
+
             default => [
                 'tanaman_id' => ['required', 'exists:tanaman,id'],
                 'nama' => ['required', 'string', 'max:255'],
-                'type' => ['required', Rule::in(['penyiraman', 'pemupukan', 'pemangkasan', 'inspeksi', 'lainnya'])],
+                'type' => [
+                    'required',
+                    Rule::in(['penyiraman', 'pemupukan', 'pemangkasan', 'inspeksi', 'lainnya']),
+                ],
                 'instruksi' => ['nullable', 'string'],
                 'interval_days' => ['nullable', 'integer', 'min:1', 'max:65535'],
                 'mulai_setelah_hari' => ['nullable', 'integer', 'min:0', 'max:65535'],
-                'berakhir_setelah_hari' => ['nullable', 'integer', 'gte:mulai_setelah_hari', 'max:65535'],
+                'berakhir_setelah_hari' => [
+                    'nullable',
+                    'integer',
+                    'gte:mulai_setelah_hari',
+                    'max:65535',
+                ],
                 'is_active' => ['sometimes', 'boolean'],
             ],
         };

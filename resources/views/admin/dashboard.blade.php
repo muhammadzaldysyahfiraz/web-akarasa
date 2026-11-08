@@ -1,31 +1,53 @@
-@extends('admin.layout', ['title' => 'Ringkasan'])
+@extends('layouts.app', ['title' => 'Dashboard'])
 
 @section('content')
-    <div class="flex flex-wrap items-end justify-between gap-4">
-        <div><p class="text-sm font-bold uppercase tracking-[.16em] text-emerald-700">Ringkasan kebun</p><h1 class="mt-2 font-display text-3xl font-extrabold text-emerald-950">Dashboard admin</h1></div>
-        <p class="text-sm text-stone-500">{{ now()->translatedFormat('l, j F Y') }}</p>
+
+<div class="mb-5">
+    <h1 class="mt-2 text-2xl font-bold text-[#193b32] sm:text-[27px]">
+        Dashboard Akarasa
+    </h1>
+
+    <p class="mt-1 text-xs text-gray-500">
+        Selamat datang di Kebun TOGA Digital. Pilih tanaman untuk melihat informasi dan perawatannya.
+    </p>
+</div>
+
+<div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="rounded-2xl bg-white p-5 shadow-sm">
+        <p class="text-xs text-gray-500">Tanaman TOGA</p>
+        <p class="mt-2 text-2xl font-bold text-[#174638]">
+            {{ \App\Models\Tanaman::where('is_active', true)->where('nama', '!=', 'Jahe')->count() }}
+        </p>
+        <p class="mt-1 text-xs text-gray-400">Tanaman aktif</p>
     </div>
-    <div class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        @foreach ([['Tanaman', $counts['tanaman'], 'tanaman'], ['Penanam', $counts['penanam'], 'penamans'], ['Tanaman ditanam', $counts['ditanam'], null], ['Jadwal pending', $counts['jadwal'], null]] as [$label, $value, $link])
-            <div class="rounded-2xl border border-stone-200 bg-white p-5">
-                <p class="text-sm font-semibold text-stone-500">{{ $label }}</p><p class="mt-2 font-display text-3xl font-extrabold text-emerald-950">{{ $value }}</p>
-                @if ($link)<a href="{{ route('admin.resources.index', $link) }}" class="mt-3 inline-block text-sm font-bold text-emerald-800">Kelola →</a>@endif
-            </div>
-        @endforeach
+
+    <div class="rounded-2xl bg-white p-5 shadow-sm">
+        <p class="text-xs text-gray-500">Kategori Tanaman</p>
+        <p class="mt-2 text-2xl font-bold text-[#174638]">
+            {{ \App\Models\Tanaman::where('is_active', true)->where('nama', '!=', 'Jahe')->distinct()->count('kategori') }}
+        </p>
+        <p class="mt-1 text-xs text-gray-400">Kategori tersedia</p>
     </div>
-    <section class="mt-8 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
-        <div class="flex items-center justify-between"><div><p class="text-sm font-bold uppercase tracking-wider text-emerald-700">Monitoring</p><h2 class="mt-1 font-display text-xl font-extrabold text-emerald-950">Jadwal perawatan mendatang</h2></div><span class="rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">{{ $counts['aturan'] }} aturan</span></div>
-        @if ($upcoming->isEmpty())
-            <p class="mt-5 rounded-xl bg-stone-50 p-4 text-sm text-stone-500">Belum ada jadwal perawatan.</p>
-        @else
-            <div class="mt-5 divide-y divide-stone-100">
-                @foreach ($upcoming as $schedule)
-                    <div class="flex flex-wrap justify-between gap-2 py-4">
-                        <div><p class="font-bold">{{ $schedule->aturanPerawatan->nama }} · {{ $schedule->tanamanDitanam->tanaman->nama }}</p><p class="mt-1 text-sm text-stone-500">Penanam: {{ $schedule->tanamanDitanam->penanam->nama }}</p></div>
-                        <p class="text-sm font-bold text-emerald-800">{{ $schedule->perawatan_at->translatedFormat('j M Y') }}</p>
-                    </div>
-                @endforeach
-            </div>
-        @endif
-    </section>
+</div>
+
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div>
+        <h2 class="text-lg font-bold text-[#193b32]">
+            Pilihan Tanaman TOGA
+        </h2>
+        <p class="mt-1 text-xs text-gray-500">
+            Klik tanaman untuk melihat detailnya.
+        </p>
+    </div>
+
+    @if (auth()->user()->role === 'admin')
+        <a href="{{ route('admin.resources.create', 'tanaman') }}"
+           class="rounded-lg bg-[#174638] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#285e50]">
+            + Tambah Tanaman
+        </a>
+    @endif
+</div>
+
+<livewire:tanaman-katalog />
+
 @endsection

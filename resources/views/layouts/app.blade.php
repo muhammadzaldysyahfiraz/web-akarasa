@@ -4,51 +4,276 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'KebunTOGA' }} · KebunTOGA</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <title>{{ $title ?? 'Akarasa' }}</title>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @livewireStyles
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        .akarasa-layout {
+            display: grid;
+            grid-template-columns: 173px minmax(0, 1fr);
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        .akarasa-sidebar {
+            width: 173px;
+            min-height: 100vh;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            background: #174238;
+            color: white;
+        }
+
+        .akarasa-main {
+            min-width: 0;
+            background: #f3f5f0;
+        }
+
+        .akarasa-content {
+            width: 100%;
+            min-width: 0;
+            padding: 24px 28px;
+        }
+
+        .akarasa-content-detail {
+            padding: 0;
+        }
+
+        @media (max-width: 700px) {
+            .akarasa-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .akarasa-sidebar {
+                width: 100%;
+                min-height: auto;
+            }
+
+            .akarasa-content {
+                padding: 16px;
+            }
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-stone-50 font-sans text-stone-800 antialiased">
-    <header class="border-b border-stone-200 bg-white">
-        <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8" aria-label="Navigasi utama">
-            <a href="{{ route('home') }}" class="flex min-w-0 items-center gap-3">
-                <img src="{{ asset('images/insos-akarasa-logo.png') }}" alt="Logo INSOS Akarasa" class="h-10 w-10 shrink-0 object-contain">
-                <span class="min-w-0">
-                    <span class="block whitespace-nowrap font-display text-lg font-extrabold tracking-tight text-emerald-950">Kebun<span class="text-emerald-700">TOGA</span></span>
-                    <span class="block text-xs font-medium text-stone-500">oleh INSOS Akarasa</span>
-                </span>
+
+<body class="min-h-screen bg-[#f3f5f0] font-sans text-[#193b32]">
+
+@php
+    $user = auth()->user();
+
+    $isAdmin = $user && $user->role === 'admin';
+    $isDetailTanaman = request()->routeIs('tanaman.show');
+
+    $namaUser = $user->nama ?? $user->name ?? 'Pengguna';
+
+    $dashboardUrl = $isAdmin
+        ? route('admin.dashboard')
+        : route('user.dashboard');
+
+    $jadwalUrl = $isAdmin
+        ? route('admin.resources.index', 'aturan-perawatan')
+        : route('jadwal-perawatan.index');
+
+    $logoutUrl = route('logout');
+@endphp
+
+<div class="akarasa-layout">
+
+    {{-- SIDEBAR --}}
+    <aside class="akarasa-sidebar">
+
+        {{-- LOGO --}}
+        <a href="{{ $dashboardUrl }}"
+           class="flex items-center gap-3 px-1">
+
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#b9dc68] text-xl text-[#174638]">
+                🌱
+            </span>
+
+            <span class="text-xl font-bold tracking-wide">
+                Akarasa
+            </span>
+        </a>
+
+        {{-- MENU --}}
+        <nav class="mt-9 flex flex-1 flex-col gap-3">
+
+            {{-- DASHBOARD --}}
+            <a href="{{ $dashboardUrl }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+               {{ request()->routeIs('admin.dashboard') || (!$isAdmin && request()->routeIs('user.dashboard')) ? 'bg-[#315e50] text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
+
+                <span>▦</span>
+                Dashboard
             </a>
-            <div class="flex items-center gap-3 text-sm font-semibold">
-                <a class="hidden rounded-full px-4 py-2 text-stone-600 hover:bg-stone-100 sm:block" href="{{ route('tanaman.index') }}">Katalog</a>
-                <a class="hidden rounded-full px-4 py-2 text-stone-600 hover:bg-stone-100 sm:block" href="{{ route('penanam.index') }}">Kebunku</a>
-                <a class="rounded-full bg-emerald-700 px-4 py-2.5 text-white transition hover:bg-emerald-800" href="{{ route('tanaman-ditanam.create') }}">+ Tambah tanaman</a>
-            </div>
+
+            {{-- TANAMAN TOGA --}}
+            {{-- Menampilkan tanaman terakhir yang dipilih --}}
+            <a href="{{ route('tanaman.index') }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+               {{ request()->routeIs('tanaman.*') ? 'bg-[#315e50] text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
+
+                <span>🌿</span>
+                Tanaman TOGA
+            </a>
+
+            {{-- JADWAL PERAWATAN --}}
+            <a href="{{ $jadwalUrl }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+               {{ ($isAdmin && request()->routeIs('admin.resources.index') && request()->route('resource') === 'aturan-perawatan')
+                    || (!$isAdmin && request()->routeIs('jadwal-perawatan.index'))
+                    ? 'bg-[#315e50] text-white'
+                    : 'text-emerald-100 hover:bg-[#285447]' }}">
+
+                <span>▢</span>
+                Jadwal Perawatan
+            </a>
+
+            {{-- LAPORAN --}}
+            <a href="{{ route('laporan.index') }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+               {{ request()->routeIs('laporan.index') ? 'bg-[#315e50] text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
+
+                <span>▥</span>
+                Laporan
+            </a>
+
         </nav>
-    </header>
 
-    @if (session('status'))
-        <div role="status" class="mx-auto mt-5 max-w-7xl rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900">{{ session('status') }}</div>
-    @endif
+        {{-- PROFIL --}}
+        <div class="mt-8 border-t border-emerald-800 pt-5">
 
-    <main>
-        @yield('content')
+            <div class="flex items-center gap-3">
+
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#b9dc68] text-xs font-bold text-[#174638]">
+                    {{ mb_strtoupper(mb_substr($namaUser, 0, 2)) }}
+                </span>
+
+                <div class="min-w-0">
+                    <p class="truncate text-xs font-semibold">
+                        {{ $namaUser }}
+                    </p>
+
+                    <p class="text-[10px] text-emerald-200">
+                        {{ $isAdmin ? 'Administrator' : 'Pengguna' }}
+                    </p>
+                </div>
+
+            </div>
+
+            {{-- LOGOUT --}}
+            <form method="POST" action="{{ $logoutUrl }}" class="mt-4">
+                @csrf
+
+                <button type="submit"
+                        class="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-200 hover:bg-[#285447]">
+                    ↪ Keluar
+                </button>
+            </form>
+
+        </div>
+
+    </aside>
+
+    {{-- KONTEN KANAN --}}
+    <main class="akarasa-main">
+
+        {{-- HEADER --}}
+        @unless ($isDetailTanaman)
+
+            <header class="flex min-h-[58px] flex-wrap items-center justify-between gap-3 border-b border-[#e2e8df] bg-white px-5 py-3 sm:px-7">
+
+                <div>
+                    <p class="text-sm font-bold text-[#193b32]">
+                        {{ $isAdmin && request()->routeIs('admin.resources.index') && request()->route('resource') === 'aturan-perawatan'
+                            ? 'Jadwal Perawatan'
+                            : 'Selamat datang, '.$namaUser }}
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-gray-500">
+                        {{ now()->translatedFormat('l, d F Y') }}
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3">
+
+                    <form action="{{ route('tanaman.index') }}"
+                          method="GET"
+                          class="hidden sm:block">
+
+                        <input
+                            type="search"
+                            name="search"
+                            placeholder="Cari tanaman atau warga..."
+                            class="w-52 rounded-lg border-0 bg-[#f3f5f0] px-3 py-2 text-[11px] outline-none focus:ring-2 focus:ring-[#b9dc68]"
+                        >
+                    </form>
+
+                    <button type="button"
+                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f3f5f0]">
+                        ♧
+                    </button>
+
+                </div>
+
+            </header>
+
+        @endunless
+
+        {{-- NOTIFIKASI --}}
+        <div class="{{ $isDetailTanaman ? 'px-5 pt-2' : 'px-6 pt-4' }}">
+
+            @if (session('status'))
+                <div role="status"
+                     class="rounded-lg border border-green-200 bg-green-100 p-3 text-sm text-green-800">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @if (session('success'))
+                <div role="status"
+                     class="rounded-lg border border-green-200 bg-green-100 p-3 text-sm text-green-800">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if (session('new_access_code'))
+                <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    <strong>Kode akses kebun:</strong>
+                    <code class="ml-2 select-all">{{ session('new_access_code') }}</code>
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                    @foreach ($errors->all() as $error)
+                        <p>{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
+
+        </div>
+
+        {{-- ISI HALAMAN --}}
+        <div class="{{ $isDetailTanaman ? 'akarasa-content-detail' : 'akarasa-content' }}">
+            @yield('content')
+        </div>
+
     </main>
 
-    <footer class="mt-20 border-t border-stone-200 bg-white">
-        <div class="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-8 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <div class="flex items-center gap-4">
-                <img src="{{ asset('images/insos-akarasa-logo.png') }}" alt="Logo INSOS Akarasa" class="h-12 w-12 shrink-0 rounded-full object-contain">
-                <div class="space-y-1">
-                    <p class="font-semibold text-stone-700">KebunTOGA <span class="font-normal text-stone-500">oleh INSOS Akarasa</span></p>
-                    <p class="max-w-xl leading-5">Jalan Sosial Dalam RT 19, Kelurahan Lamaru, Kecamatan Balikpapan Timur, Kota Balikpapan.</p>
-                </div>
-            </div>
-            <a class="shrink-0 hover:text-emerald-800" href="{{ route('admin.login') }}">Area admin</a>
-        </div>
-    </footer>
-    @livewireScripts
+</div>
+
 </body>
 </html>

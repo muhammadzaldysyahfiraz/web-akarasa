@@ -11,10 +11,12 @@ class TanamanKatalog extends Component
     use WithPagination;
 
     public string $search = '';
-
     public string $kategori = '';
 
-    public bool $featured = false;
+    public function mount(): void
+    {
+        $this->search = (string) request()->query('search', '');
+    }
 
     public function updatedSearch(): void
     {
@@ -30,14 +32,26 @@ class TanamanKatalog extends Component
     {
         $query = Tanaman::query()
             ->where('is_active', true)
-            ->when($this->search !== '', fn ($query) => $query->where('nama', 'like', '%'.$this->search.'%'))
-            ->when($this->kategori !== '', fn ($query) => $query->where('kategori', $this->kategori))
+            ->where('nama', '!=', 'Jahe')
+            ->when($this->search !== '', function ($query) {
+                $query->where(function ($subQuery) {
+                    $subQuery->where('nama', 'like', '%' . $this->search . '%')
+                        ->orWhere('nama_ilmiah', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->when($this->kategori !== '', function ($query) {
+                $query->where('kategori', $this->kategori);
+            })
             ->orderBy('nama');
 
         return view('livewire.tanaman-katalog', [
-            'tanamans' => $this->featured ? $query->limit(3)->get() : $query->paginate(9),
-            'kategoriList' => Tanaman::query()->where('is_active', true)->distinct()->orderBy('kategori')->pluck('kategori'),
-            'featured' => $this->featured,
+            'tanamans' => $query->paginate(15),
+            'kategoriList' => Tanaman::where('is_active', true)
+                ->where('nama', '!=', 'Jahe')
+                ->select('kategori')
+                ->distinct()
+                ->orderBy('kategori')
+                ->pluck('kategori'),
         ]);
     }
 }

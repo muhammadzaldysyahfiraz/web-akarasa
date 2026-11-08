@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AturanPerawatan;
+use App\Models\AktivitasPerawatan;
 use App\Models\JadwalPerawatan;
 use App\Models\Penanam;
 use App\Models\Tanaman;
@@ -268,6 +269,109 @@ class KebunTogaTest extends TestCase
 
         $this->assertGreaterThan(0, $before);
         $this->assertSame($before, $planting->jadwalPerawatan()->count());
+    }
+
+    public function test_warga_can_view_the_schedule_calendar_without_management_actions(): void
+    {
+        $this->createPlanting();
+        $warga = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($warga)
+            ->get(route('jadwal-perawatan.index'))
+            ->assertOk()
+            ->assertSee('Jadwal Perawatan')
+            ->assertSee('Penyiraman rutin')
+            ->assertDontSee('Tambah Jadwal')
+            ->assertDontSee('Kelola Aturan Perawatan');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)
+            ->get(route('admin.resources.index', 'aturan-perawatan'))
+            ->assertOk()
+            ->assertSee('Tambah Jadwal')
+            ->assertSee('Kelola Aturan Perawatan');
+    }
+
+    public function test_report_is_a_separate_page_and_uses_recorded_care_activity(): void
+    {
+        $planting = $this->createPlanting();
+        $schedule = $planting->jadwalPerawatan()
+            ->whereDate('perawatan_at', today())
+            ->firstOrFail();
+        $schedule->update(['status' => 'completed']);
+        AktivitasPerawatan::create([
+            'tanaman_ditanam_id' => $planting->id,
+            'jadwal_perawatan_id' => $schedule->id,
+            'performed_at' => now(),
+        ]);
+
+        $warga = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($warga)
+            ->get(route('user.dashboard'))
+            ->assertOk()
+            ->assertSee('Semua Tanaman TOGA')
+            ->assertDontSee('Laporan &amp; Analisis', false);
+
+        $this->get(route('laporan.index'))
+            ->assertOk()
+            ->assertSee('Laporan &amp; Analisis', false)
+            ->assertSee('Penyelesaian Perawatan')
+            ->assertSee('100%')
+            ->assertSee('Aktivitas Tercatat')
+            ->assertSee('Riwayat Laporan Bulanan')
+            ->assertSee('1 aktivitas');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)
+            ->get(route('laporan.index'))
+            ->assertOk()
+            ->assertSee('Laporan &amp; Analisis', false);
+    }
+
+    public function test_warga_can_mark_a_schedule_done_with_one_click(): void
+    {
+        $planting = $this->createPlanting();
+        $schedule = $planting->jadwalPerawatan()->firstOrFail();
+        $warga = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($warga)
+            ->post(route('jadwal-perawatan.record', $schedule))
+            ->assertRedirect(route('jadwal-perawatan.index', [
+                'month' => $schedule->perawatan_at->format('Y-m'),
+                'tanggal' => $schedule->perawatan_at->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas('jadwal_perawatan', [
+            'id' => $schedule->id,
+            'status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('aktivitas_perawatan', [
+            'jadwal_perawatan_id' => $schedule->id,
+        ]);
+
+        $this->get(route('jadwal-perawatan.index', [
+            'month' => $schedule->perawatan_at->format('Y-m'),
+            'tanggal' => $schedule->perawatan_at->toDateString(),
+        ]))
+            ->assertOk()
+            ->assertSee('Sudah dilakukan')
+            ->assertDontSee('Nama pelaksana')
+            ->assertDontSee('Catatan aktivitas');
+    }
+
+    public function test_only_regular_users_can_record_schedule_activities(): void
+    {
+        $planting = $this->createPlanting();
+        $schedule = $planting->jadwalPerawatan()->firstOrFail();
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->post(route('jadwal-perawatan.record', $schedule))
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('aktivitas_perawatan', [
+            'jadwal_perawatan_id' => $schedule->id,
+        ]);
     }
 
     public function test_harvested_or_dead_plants_do_not_keep_future_pending_schedules(): void

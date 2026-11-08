@@ -10,7 +10,8 @@ class AktivitasPerawatan extends Model
     protected $table = 'aktivitas_perawatan';
 
     protected $fillable = [
-        'tanaman_ditanam_id', 'jadwal_perawatan_id', 'performed_at', 'catatan',
+        'tanaman_ditanam_id', 'jadwal_perawatan_id', 'performed_at',
+        'nama_pelaksana', 'catatan',
     ];
 
     protected function casts(): array

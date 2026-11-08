@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="mx-auto max-w-3xl px-5 py-12 sm:px-8">
-        <a href="{{ route('tanaman.index') }}" class="text-sm font-bold text-emerald-800 hover:text-emerald-950">← Kembali ke katalog</a>
-        <div class="mt-7 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-            <p class="text-sm font-bold uppercase tracking-[.16em] text-emerald-700">Catat kebunmu</p>
-            <h1 class="mt-2 font-display text-3xl font-extrabold text-emerald-950">Tambah tanaman</h1>
-            <p class="mt-3 leading-6 text-stone-600">Gunakan kode akses yang sama untuk menambahkan tanaman ke kebun yang sudah ada. Kode ini dipakai untuk melindungi data kebunmu.</p>
+    <section class="mx-auto max-w-5xl px-5 py-7 sm:px-8">
+        <a href="{{ route('tanaman.index') }}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">← Kembali ke katalog</a>
+        <div class="mt-4 rounded-xl border border-[#e2e8df] bg-white p-5 shadow-sm sm:p-7">
+            <p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Catat kebunmu</p>
+            <h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">Tambah Tanaman Baru</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Gunakan kode akses yang sama untuk menambahkan tanaman ke kebun yang sudah ada. Kode ini dipakai untuk melindungi data kebunmu.</p>
             @if ($errors->any())
-                <div role="alert" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                <div role="alert" class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                     <p class="font-bold">Periksa kembali data yang diisi.</p>
                     <ul class="mt-2 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
                 </div>
             @endif
-            <form method="POST" action="{{ route('tanaman-ditanam.store') }}" class="mt-7 space-y-5">
+            <form method="POST" action="{{ route('tanaman-ditanam.store') }}" class="mt-6 space-y-5">
                 @csrf
                 <div class="grid gap-5 sm:grid-cols-2">
                     <label class="block text-sm font-bold text-stone-700">Nama penanam
@@ -46,7 +46,9 @@
                 <label class="block text-sm font-bold text-stone-700">Catatan (opsional)
                     <textarea name="catatan" rows="3" class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">{{ old('catatan') }}</textarea>
                 </label>
-                <button class="w-full rounded-xl bg-emerald-800 px-5 py-3.5 font-bold text-white hover:bg-emerald-950">Simpan ke kebunku</button>
+                <div class="flex justify-end">
+                    <button class="rounded-lg bg-[#174638] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#285e50]">Simpan ke kebunku</button>
+                </div>
             </form>
         </div>
     </section>

@@ -78,4 +78,32 @@ class KebunController extends Controller
 
         return redirect()->route('kebun.show', $penanam)->with('status', 'Perawatan berhasil dicatat.');
     }
+
+    public function recordActivity(Request $request, JadwalPerawatan $jadwal): RedirectResponse
+    {
+        DB::transaction(function () use ($jadwal): void {
+            $lockedSchedule = JadwalPerawatan::query()
+                ->whereKey($jadwal->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless($lockedSchedule->status === 'pending', 409, 'Jadwal ini sudah ditandai selesai atau terlewat.');
+
+            $lockedSchedule->update(['status' => 'completed']);
+            $lockedSchedule->aktivitasPerawatan()->firstOrCreate(
+                [],
+                [
+                    'tanaman_ditanam_id' => $lockedSchedule->tanaman_ditanam_id,
+                    'performed_at' => now(),
+                ],
+            );
+        });
+
+        return redirect()
+            ->route('jadwal-perawatan.index', [
+                'month' => $jadwal->perawatan_at->format('Y-m'),
+                'tanggal' => $jadwal->perawatan_at->toDateString(),
+            ])
+            ->with('status', 'Aktivitas perawatan berhasil dicatat.');
+    }
 }
