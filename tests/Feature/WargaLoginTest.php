@@ -16,7 +16,11 @@ class WargaLoginTest extends TestCase
         $this->get(route('warga.login'))
             ->assertOk()
             ->assertSee('Login sebagai warga')
-            ->assertSee('Login sebagai admin');
+            ->assertSee('Login sebagai admin')
+            ->assertSee('href="'.route('register').'"', false)
+            ->assertSee('Buat akun baru')
+            ->assertDontSee('name="nama"', false)
+            ->assertDontSee('Akun baru dibuat otomatis saat pertama kali masuk.');
 
         $this->get(route('admin.login'))
             ->assertOk()
@@ -24,24 +28,41 @@ class WargaLoginTest extends TestCase
             ->assertSee('Login sebagai admin')
             ->assertSee('name="nama"', false)
             ->assertDontSee('name="email"', false);
+
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('name="nama"', false)
+            ->assertSee('name="email"', false)
+            ->assertSee('name="password_confirmation"', false)
+            ->assertSee('href="'.route('warga.login').'"', false);
     }
 
-    public function test_new_warga_can_create_an_account_on_first_login(): void
+    public function test_new_warga_can_register_then_log_in(): void
     {
-        $response = $this->from(route('warga.login'))->post(route('warga.login.store'), [
+        $response = $this->from(route('register'))->post(route('register.store'), [
             'nama' => 'Budi Santoso',
             'email' => 'budi@example.com',
             'password' => 'rahasia123',
+            'password_confirmation' => 'rahasia123',
         ]);
 
         $user = User::where('email', 'budi@example.com')->firstOrFail();
 
-        $response->assertRedirect(route('user.dashboard'));
-        $response->assertSessionHas('success', 'Akun berhasil dibuat. Selamat datang!');
-        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('warga.login'));
+        $response->assertSessionHas('success', 'Akun berhasil dibuat. Silakan masuk.');
+        $this->get(route('warga.login'))
+            ->assertOk()
+            ->assertSee('Akun berhasil dibuat. Silakan masuk.');
+        $this->assertGuest();
         $this->assertSame('Budi Santoso', $user->nama);
         $this->assertSame('user', $user->role);
         $this->assertTrue(password_verify('rahasia123', $user->password));
+
+        $this->post(route('warga.login.store'), [
+            'email' => 'budi@example.com',
+            'password' => 'rahasia123',
+        ])->assertRedirect(route('user.dashboard'));
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_existing_warga_can_log_in_without_creating_another_account(): void
@@ -54,7 +75,6 @@ class WargaLoginTest extends TestCase
         ]);
 
         $response = $this->post(route('warga.login.store'), [
-            'nama' => 'Nama Baru',
             'email' => 'warga@example.com',
             'password' => 'rahasia123',
         ]);
@@ -65,7 +85,7 @@ class WargaLoginTest extends TestCase
         $this->assertSame('Nama Lama', $user->fresh()->nama);
     }
 
-    public function test_existing_email_cannot_be_claimed_with_a_different_password(): void
+    public function test_login_rejects_an_existing_email_with_a_different_password(): void
     {
         $user = User::factory()->create([
             'nama' => 'Nama Lama',
@@ -75,27 +95,28 @@ class WargaLoginTest extends TestCase
         ]);
 
         $response = $this->from(route('warga.login'))->post(route('warga.login.store'), [
-            'nama' => 'Nama Penyerang',
             'email' => 'warga@example.com',
             'password' => 'password-salah',
         ]);
 
         $response->assertRedirect(route('warga.login'));
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors([
+            'email' => 'Email atau kata sandi tidak sesuai. Periksa kembali, atau buat akun baru jika belum mendaftar.',
+        ]);
         $this->assertGuest();
         $this->assertSame(1, User::where('email', 'warga@example.com')->count());
         $this->assertSame('Nama Lama', $user->fresh()->nama);
     }
 
-    public function test_first_login_requires_a_name_and_a_long_enough_password(): void
+    public function test_login_does_not_create_an_account_for_an_unregistered_email(): void
     {
         $response = $this->from(route('warga.login'))->post(route('warga.login.store'), [
             'email' => 'baru@example.com',
-            'password' => 'pendek',
+            'password' => 'password123',
         ]);
 
         $response->assertRedirect(route('warga.login'));
-        $response->assertSessionHasErrors(['nama', 'password']);
+        $response->assertSessionHasErrors('email');
         $this->assertDatabaseMissing('users', ['email' => 'baru@example.com']);
     }
 

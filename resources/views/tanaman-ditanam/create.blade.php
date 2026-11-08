@@ -6,7 +6,7 @@
         <div class="mt-4 rounded-xl border border-[#e2e8df] bg-white p-5 shadow-sm sm:p-7">
             <p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Catat kebunmu</p>
             <h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">Tambah Tanaman Baru</h1>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Gunakan kode akses yang sama untuk menambahkan tanaman ke kebun yang sudah ada. Kode ini dipakai untuk melindungi data kebunmu.</p>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Gunakan kode akses untuk menambahkan tanaman ke kebun yang sudah ada. Setelah ditambahkan, semua warga yang masuk dapat melihat dan merawatnya.</p>
             @if ($errors->any())
                 <div role="alert" class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                     <p class="font-bold">Periksa kembali data yang diisi.</p>
@@ -16,7 +16,7 @@
             <form method="POST" action="{{ route('tanaman-ditanam.store') }}" class="mt-6 space-y-5">
                 @csrf
                 <div class="grid gap-5 sm:grid-cols-2">
-                    <label class="block text-sm font-bold text-stone-700">Nama penanam
+                    <label class="block text-sm font-bold text-stone-700">Nama kebun
                         <input name="penanam_nama" value="{{ old('penanam_nama') }}" required maxlength="255" class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
                     </label>
                     <label class="block text-sm font-bold text-stone-700">Kode akses kebun
@@ -47,7 +47,7 @@
                     <textarea name="catatan" rows="3" class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">{{ old('catatan') }}</textarea>
                 </label>
                 <div class="flex justify-end">
-                    <button class="rounded-lg bg-[#174638] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#285e50]">Simpan ke kebunku</button>
+                    <button class="rounded-lg bg-[#174638] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#285e50]">Tambah ke kebun</button>
                 </div>
             </form>
         </div>

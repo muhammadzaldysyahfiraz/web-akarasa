@@ -10,6 +10,7 @@ use App\Models\Tanaman;
 use App\Models\TanamanDitanam;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use App\Livewire\TanamanKatalog;
@@ -93,75 +94,110 @@ class KebunTogaTest extends TestCase
         $this->getJson('/api/v1/tanaman')->assertOk()->assertJsonMissing(['nama' => 'Jahe Uji']);
     }
 
+    public function test_plant_details_do_not_show_a_planter_or_owner_name(): void
+    {
+        $this->tanaman->setAttribute('nama_penanam', 'Siti Aminah');
+
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->get(route('tanaman.show', $this->tanaman))
+            ->assertOk()
+            ->assertDontSee('NAMA PENANAM')
+            ->assertDontSee('Siti Aminah');
+    }
+
     public function test_public_can_add_a_plant_and_schedule_is_generated_from_its_rules(): void
     {
-        $response = $this->post(route('tanaman-ditanam.store'), [
-            'penanam_nama' => $this->penanam->nama,
-            'access_code' => 'rahasia-kebun-123',
-            'tanaman_id' => $this->tanaman->id,
-            'ditanam_at' => today()->toDateString(),
-            'quantity' => 2,
-            'location' => 'Teras',
-        ]);
+        $response = $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->post(route('tanaman-ditanam.store'), [
+                'penanam_nama' => $this->penanam->nama,
+                'access_code' => 'rahasia-kebun-123',
+                'tanaman_id' => $this->tanaman->id,
+                'ditanam_at' => today()->toDateString(),
+                'quantity' => 2,
+                'location' => 'Teras',
+            ]);
 
         $planting = TanamanDitanam::firstOrFail();
-        $response->assertRedirect(route('kebun.show', $this->penanam));
+        $response->assertRedirect(route('penanam.index'));
         $this->assertDatabaseHas('tanaman_ditanam', ['id' => $planting->id, 'quantity' => 2]);
         $this->assertGreaterThan(1, $planting->jadwalPerawatan()->count());
     }
 
-    public function test_invalid_access_code_cannot_open_or_change_a_garden(): void
+    public function test_access_code_is_still_required_to_add_a_plant_to_a_garden(): void
     {
-        $planting = $this->createPlanting();
-        $schedule = $planting->jadwalPerawatan()->firstOrFail();
-
-        $this->post(route('kebun.access', $this->penanam), ['access_code' => 'wrong-code'])
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->post(route('tanaman-ditanam.store'), [
+                'penanam_nama' => $this->penanam->nama,
+                'access_code' => 'wrong-code',
+                'tanaman_id' => $this->tanaman->id,
+                'ditanam_at' => today()->toDateString(),
+                'quantity' => 1,
+            ])
             ->assertForbidden();
 
-        $this->withHeader('X-Kode-Akses', 'wrong-code')
-            ->getJson('/api/v1/penamans/'.$this->penanam->id.'/garden')
-            ->assertForbidden();
-
-        $this->patchJson('/api/v1/jadwal-perawatan/'.$schedule->id.'/complete', ['access_code' => 'wrong-code'])
-            ->assertForbidden();
-
-        $this->assertDatabaseHas('jadwal_perawatan', ['id' => $schedule->id, 'status' => 'pending']);
+        $this->assertDatabaseCount('tanaman_ditanam', 0);
     }
 
-    public function test_completing_a_schedule_records_one_activity_for_the_right_grower(): void
+    public function test_any_logged_in_warga_can_view_and_care_for_a_garden_without_its_access_code(): void
     {
         $planting = $this->createPlanting();
         $schedule = $planting->jadwalPerawatan()->firstOrFail();
-        $this->withSession(['garden_access.'.$this->penanam->id => true])
+        $warga = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($warga)
+            ->get(route('penanam.index'))
+            ->assertOk()
+            ->assertSee('Kebun bersama')
+            ->assertSee('Jahe Uji');
+
+        $this->actingAs($warga)
             ->patch(route('kebun.complete', [$this->penanam, $schedule]))
-            ->assertRedirect(route('kebun.show', $this->penanam));
+            ->assertRedirect(route('penanam.index'));
 
         $this->assertDatabaseHas('jadwal_perawatan', ['id' => $schedule->id, 'status' => 'completed']);
-        $this->assertDatabaseCount('aktivitas_perawatan', 1);
-
-        $this->withSession(['garden_access.'.$this->penanam->id => true])
-            ->patch(route('kebun.complete', [$this->penanam, $schedule]));
-        $this->assertDatabaseCount('aktivitas_perawatan', 1);
+        $this->assertDatabaseHas('aktivitas_perawatan', [
+            'jadwal_perawatan_id' => $schedule->id,
+            'user_id' => $warga->id,
+        ]);
     }
 
-    public function test_dashboard_and_private_api_show_only_the_growers_schedule(): void
+    public function test_authenticated_api_users_can_view_all_garden_data_without_a_code(): void
     {
         $planting = $this->createPlanting();
-        $this->withSession(['garden_access.'.$this->penanam->id => true])
-            ->get(route('kebun.show', $this->penanam))
+        $warga = User::factory()->create(['role' => 'user']);
+
+        $this->getJson('/api/v1/penamans/'.$this->penanam->id.'/garden')
+            ->assertUnauthorized();
+
+        $this->actingAs($warga)
+            ->get(route('penanam.index'))
             ->assertOk()
             ->assertSee('Jadwal perawatan')
             ->assertSee('Perlu dilakukan hari ini');
 
-        $this->withHeader('X-Kode-Akses', 'rahasia-kebun-123')
+        $this->actingAs($warga)
             ->getJson('/api/v1/penamans/'.$this->penanam->id.'/garden')
             ->assertOk()
             ->assertJsonPath('data.0.tanaman.nama', 'Jahe Uji');
 
-        $this->withHeader('X-Kode-Akses', 'rahasia-kebun-123')
+        $this->actingAs($warga)
             ->getJson('/api/v1/penamans/'.$this->penanam->id.'/perawatan?tanggal='.today()->toDateString())
             ->assertOk()
             ->assertJsonPath('data.0.status', 'pending');
+
+        $schedule = $planting->jadwalPerawatan()->firstOrFail();
+        $this->actingAs($warga)
+            ->patchJson('/api/v1/jadwal-perawatan/'.$schedule->id.'/complete', [
+                'catatan' => 'Disiram bersama.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed');
+
+        $this->assertDatabaseHas('aktivitas_perawatan', [
+            'jadwal_perawatan_id' => $schedule->id,
+            'user_id' => $warga->id,
+            'catatan' => 'Disiram bersama.',
+        ]);
     }
 
     public function test_api_contract_returns_resource_data_and_validation_errors(): void
@@ -273,23 +309,51 @@ class KebunTogaTest extends TestCase
 
     public function test_warga_can_view_the_schedule_calendar_without_management_actions(): void
     {
-        $this->createPlanting();
+        $planting = $this->createPlanting();
+        $planting->update(['location' => 'Halaman depan']);
         $warga = User::factory()->create(['role' => 'user']);
 
-        $this->actingAs($warga)
-            ->get(route('jadwal-perawatan.index'))
+        $wargaResponse = $this->actingAs($warga)
+            ->get(route('jadwal-perawatan.index', [
+                'month' => today()->format('Y-m'),
+                'tanggal' => today()->toDateString(),
+            ]))
             ->assertOk()
             ->assertSee('Jadwal Perawatan')
             ->assertSee('Penyiraman rutin')
+            ->assertDontSee('Halaman depan')
+            ->assertDontSee('Penanam Uji')
             ->assertDontSee('Tambah Jadwal')
             ->assertDontSee('Kelola Aturan Perawatan');
 
+        preg_match_all('/<article\b[^>]*>(.*?)<\/article>/s', $wargaResponse->getContent(), $wargaCards);
+        $this->assertNotEmpty($wargaCards[1]);
+        $wargaCardText = html_entity_decode(strip_tags(implode(' ', $wargaCards[1])), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $this->assertStringContainsString('Penyiraman rutin', $wargaCardText);
+        $this->assertStringContainsString('Jahe Uji', $wargaCardText);
+        $this->assertStringNotContainsString('Halaman depan', $wargaCardText);
+
+        $this->assertDatabaseHas('tanaman_ditanam', [
+            'id' => $planting->id,
+            'location' => 'Halaman depan',
+        ]);
+
         $admin = User::factory()->create(['role' => 'admin']);
-        $this->actingAs($admin)
-            ->get(route('admin.resources.index', 'aturan-perawatan'))
+        $adminResponse = $this->actingAs($admin)
+            ->get(route('admin.resources.index', [
+                'resource' => 'aturan-perawatan',
+                'month' => today()->format('Y-m'),
+                'tanggal' => today()->toDateString(),
+            ]))
             ->assertOk()
+            ->assertDontSee('Halaman depan')
+            ->assertDontSee('Penanam Uji')
             ->assertSee('Tambah Jadwal')
             ->assertSee('Kelola Aturan Perawatan');
+        preg_match_all('/<article\b[^>]*>(.*?)<\/article>/s', $adminResponse->getContent(), $adminCards);
+        $this->assertNotEmpty($adminCards[1]);
+        $adminCardText = html_entity_decode(strip_tags(implode(' ', $adminCards[1])), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $this->assertStringNotContainsString('Halaman depan', $adminCardText);
     }
 
     public function test_report_is_a_separate_page_and_uses_recorded_care_activity(): void
@@ -348,6 +412,7 @@ class KebunTogaTest extends TestCase
         ]);
         $this->assertDatabaseHas('aktivitas_perawatan', [
             'jadwal_perawatan_id' => $schedule->id,
+            'user_id' => $warga->id,
         ]);
 
         $this->get(route('jadwal-perawatan.index', [
@@ -356,8 +421,41 @@ class KebunTogaTest extends TestCase
         ]))
             ->assertOk()
             ->assertSee('Sudah dilakukan')
-            ->assertDontSee('Nama pelaksana')
+            ->assertSee($warga->nama)
             ->assertDontSee('Catatan aktivitas');
+    }
+
+    public function test_competing_users_cannot_record_a_schedule_completion_twice(): void
+    {
+        $planting = $this->createPlanting();
+        $schedule = $planting->jadwalPerawatan()->firstOrFail();
+        $firstWarga = User::factory()->create(['role' => 'user']);
+        $secondWarga = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($firstWarga)
+            ->post(route('jadwal-perawatan.record', $schedule))
+            ->assertRedirect();
+        $this->actingAs($secondWarga)
+            ->post(route('jadwal-perawatan.record', $schedule))
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('aktivitas_perawatan', 1);
+        $this->assertDatabaseHas('aktivitas_perawatan', [
+            'jadwal_perawatan_id' => $schedule->id,
+            'user_id' => $firstWarga->id,
+        ]);
+
+        try {
+            AktivitasPerawatan::create([
+                'tanaman_ditanam_id' => $planting->id,
+                'jadwal_perawatan_id' => $schedule->id,
+                'performed_at' => now(),
+                'user_id' => $secondWarga->id,
+            ]);
+            $this->fail('The database should reject a second activity for the same schedule.');
+        } catch (QueryException) {
+            $this->assertDatabaseCount('aktivitas_perawatan', 1);
+        }
     }
 
     public function test_only_regular_users_can_record_schedule_activities(): void
@@ -372,6 +470,40 @@ class KebunTogaTest extends TestCase
         $this->assertDatabaseMissing('aktivitas_perawatan', [
             'jadwal_perawatan_id' => $schedule->id,
         ]);
+    }
+
+    public function test_shared_garden_combines_plantings_without_showing_group_names(): void
+    {
+        $this->createPlanting()->update(['location' => 'Halaman depan']);
+        $otherPenanam = Penanam::create([
+            'nama' => 'Siti Aminah',
+            'access_code_hash' => Hash::make('kode-berbeda-123'),
+        ]);
+        $otherPlanting = TanamanDitanam::create([
+            'penanam_id' => $otherPenanam->id,
+            'tanaman_id' => $this->tanaman->id,
+            'ditanam_at' => today(),
+            'quantity' => 1,
+            'location' => 'Halaman belakang',
+            'status' => 'bertumbuh',
+        ]);
+        app(\App\Services\PerawatanScheduleService::class)->generateRollingHorizon($otherPlanting);
+
+        $warga = User::factory()->create(['role' => 'user']);
+        $this->actingAs($warga)
+            ->get(route('penanam.index'))
+            ->assertOk()
+            ->assertSee('Tanaman di Kebun Bersama')
+            ->assertDontSee('Halaman depan')
+            ->assertDontSee('Halaman belakang')
+            ->assertDontSee('Penanam Uji')
+            ->assertDontSee('Siti Aminah')
+            ->assertDontSee('Kebun Penanam Uji')
+            ->assertDontSee('Nama Penanam');
+
+        $this->actingAs($warga)
+            ->get(route('kebun.show', $otherPenanam))
+            ->assertRedirect(route('penanam.index'));
     }
 
     public function test_harvested_or_dead_plants_do_not_keep_future_pending_schedules(): void

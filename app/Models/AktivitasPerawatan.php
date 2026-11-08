@@ -11,7 +11,7 @@ class AktivitasPerawatan extends Model
 
     protected $fillable = [
         'tanaman_ditanam_id', 'jadwal_perawatan_id', 'performed_at',
-        'nama_pelaksana', 'catatan',
+        'user_id', 'nama_pelaksana', 'catatan',
     ];
 
     protected function casts(): array
@@ -27,5 +27,10 @@ class AktivitasPerawatan extends Model
     public function jadwalPerawatan(): BelongsTo
     {
         return $this->belongsTo(JadwalPerawatan::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

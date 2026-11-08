@@ -67,19 +67,16 @@ class AuthController extends Controller
             'password.min' => 'Kata sandi minimal 8 karakter.',
         ]);
 
-        $user = User::create([
+        User::create([
             'nama' => $validated['nama'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'user',
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
-
         return redirect()
-            ->route('user.dashboard')
-            ->with('success', 'Pendaftaran berhasil. Selamat datang!');
+            ->route('warga.login')
+            ->with('success', 'Akun berhasil dibuat. Silakan masuk.');
     }
 
     /**
@@ -155,91 +152,38 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
-            'nama' => ['nullable', 'string', 'max:255'],
         ], [
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
-        $created = false;
-
-        $user = User::where('email', $credentials['email'])->first();
-
-        if ($user) {
-            if (!Auth::attempt([
-                'email' => $credentials['email'],
-                'password' => $credentials['password'],
-            ], $request->boolean('remember'))) {
-                return back()
-                    ->withErrors([
-                        'email' => 'Email atau kata sandi tidak sesuai.',
-                    ])
-                    ->onlyInput('email');
-            }
-        } else {
-            $validated = $request->validate([
-                'nama' => ['required', 'string', 'max:255'],
-                'password' => [
-                    'required',
-                    'string',
-                    Password::min(8),
-                ],
-            ], [
-                'nama.required' => 'Nama wajib diisi saat pertama kali masuk.',
-                'nama.max' => 'Nama maksimal 255 karakter.',
-                'password.min' => 'Kata sandi minimal 8 karakter.',
-            ]);
-
-            try {
-                $user = User::create([
-                    'nama' => $validated['nama'],
-                    'email' => $credentials['email'],
-                    'password' => Hash::make($credentials['password']),
-                    'role' => 'user',
-                ]);
-
-                Auth::login($user, $request->boolean('remember'));
-
-                $created = true;
-
-            } catch (QueryException $exception) {
-                $user = User::where('email', $credentials['email'])->first();
-
-                if (!$user || !Auth::attempt([
-                    'email' => $credentials['email'],
-                    'password' => $credentials['password'],
-                ], $request->boolean('remember'))) {
-                    return back()
-                        ->withErrors([
-                            'email' => 'Email atau kata sandi tidak sesuai.',
-                        ])
-                        ->onlyInput('email');
-                }
-            }
+        if (!Auth::attempt([
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+        ], $request->boolean('remember'))) {
+            return back()
+                ->withErrors([
+                    'email' => 'Email atau kata sandi tidak sesuai. Periksa kembali, atau buat akun baru jika belum mendaftar.',
+                ])
+                ->onlyInput('email');
         }
 
         $request->session()->regenerate();
 
-        // Admin tidak boleh login melalui halaman warga.
         if (Auth::user()->role !== 'user') {
             Auth::logout();
-
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()
                 ->route('warga.login')
                 ->withErrors([
-                    'email' => 'Silakan gunakan halaman login admin.',
+                    'email' => 'Silakan gunakan halaman masuk admin.',
                 ]);
         }
 
-        $response = redirect()->route('user.dashboard');
-
-        return $created
-            ? $response->with('success', 'Akun berhasil dibuat. Selamat datang!')
-            : $response;
+        return redirect()->route('user.dashboard');
     }
 
     /**

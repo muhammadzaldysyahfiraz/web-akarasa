@@ -321,14 +321,6 @@
                             </p>
                         </div>
 
-                        <div class="detail-info">
-                            <p class="text-[8px] uppercase tracking-wide text-gray-500">
-                                NAMA PENANAM
-                            </p>
-                            <p class="mt-1 text-[10px] font-bold text-[#193b32]">
-                                {{ $tanaman->nama_penanam ?: 'Belum diisi Admin' }}
-                            </p>
-                        </div>
                     </div>
 
                     {{-- DESKRIPSI --}}

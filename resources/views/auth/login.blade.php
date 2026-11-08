@@ -100,7 +100,7 @@
                     </h2>
 
                     <p class="mt-2 text-[10px] leading-5 text-[#7B8C80] sm:text-xs">
-                        Masuk dengan email Anda. Pengguna baru cukup mengisi nama dan membuat kata sandi.
+                        Masuk menggunakan email dan kata sandi yang sudah terdaftar.
                     </p>
                 </div>
 
@@ -127,24 +127,6 @@
                 <!-- FORM LOGIN WARGA -->
                 <form method="POST" action="{{ route('warga.login.store') }}">
                     @csrf
-
-                    <!-- Nama untuk pengguna baru -->
-                    <div class="mb-4">
-                        <label for="nama"
-                               class="mb-1.5 block text-[10px] font-medium text-[#30483D]">
-                            Nama <span class="font-normal text-[#7B8C80]">(khusus pertama kali masuk)</span>
-                        </label>
-
-                        <input
-                            id="nama"
-                            type="text"
-                            name="nama"
-                            value="{{ old('nama') }}"
-                            autocomplete="name"
-                            placeholder="Nama lengkap"
-                            class="w-full rounded-md border border-[#DCE3DA] bg-white px-3 py-2.5 text-xs text-[#30483D] outline-none transition placeholder:text-[#9AA69D] focus:border-[#43836A] focus:ring-2 focus:ring-[#43836A]/10"
-                        >
-                    </div>
 
                     <!-- Email -->
                     <div class="mb-4">
@@ -206,7 +188,7 @@
                                 name="password"
                                 required
                                 autocomplete="current-password"
-                                placeholder="Buat atau masukkan kata sandi"
+                                placeholder="Masukkan kata sandi"
                                 class="w-full rounded-md border border-[#DCE3DA] bg-white py-2.5 pl-9 pr-3 text-xs text-[#30483D] outline-none transition placeholder:text-[#9AA69D] focus:border-[#43836A] focus:ring-2 focus:ring-[#43836A]/10"
                             >
                         </div>
@@ -247,7 +229,10 @@
                 </form>
 
                 <p class="mt-4 text-center text-[10px] text-[#7B8C80] sm:text-[11px]">
-                    Akun baru dibuat otomatis saat pertama kali masuk.
+                    Belum punya akun?
+                    <a href="{{ route('register') }}" class="font-medium text-[#476B58] hover:underline">
+                        Buat akun baru
+                    </a>
                 </p>
 
             </div>

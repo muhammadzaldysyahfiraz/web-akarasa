@@ -4,7 +4,6 @@
 @php
     $previousMonth = $monthStart->subMonth()->format('Y-m');
     $nextMonth = $monthStart->addMonth()->format('Y-m');
-    $locationQuery = $selectedLocation !== '' ? ['location' => $selectedLocation] : [];
     $weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 @endphp
 
@@ -30,25 +29,6 @@
     @endif
 </div>
 
-<form method="GET" action="{{ route($scheduleRouteName, $scheduleRouteParameters) }}"
-      class="mb-4 flex flex-wrap items-center gap-2">
-    <input type="hidden" name="month" value="{{ $monthStart->format('Y-m') }}">
-    <input type="hidden" name="tanggal" value="{{ $selectedDate->format('Y-m-d') }}">
-    <label for="location" class="sr-only">Filter lokasi</label>
-    <select id="location" name="location"
-            class="rounded-lg border border-[#dce5d9] bg-white px-3 py-2 text-xs text-[#193b32] outline-none focus:border-[#174638]">
-        <option value="">Semua Wilayah</option>
-        @foreach ($locations as $location)
-            <option value="{{ $location }}" @selected($selectedLocation === $location)>
-                {{ $location }}
-            </option>
-        @endforeach
-    </select>
-    <button class="rounded-lg border border-[#dce5d9] bg-white px-3 py-2 text-xs font-semibold text-[#193b32] hover:bg-[#f3f6f0]">
-        Terapkan
-    </button>
-</form>
-
 <div class="grid items-stretch gap-4 xl:grid-cols-[1.55fr_1fr]">
     <section class="rounded-xl border border-[#e2e8df] bg-white p-4 shadow-sm sm:p-5">
         <div class="mb-4 flex items-center justify-between gap-3">
@@ -56,10 +36,10 @@
                 {{ $monthStart->translatedFormat('F Y') }}
             </h2>
             <div class="flex gap-2">
-                <a href="{{ route($scheduleRouteName, $scheduleRouteParameters + ['month' => $previousMonth] + $locationQuery) }}"
+                <a href="{{ route($scheduleRouteName, $scheduleRouteParameters + ['month' => $previousMonth]) }}"
                    aria-label="Bulan sebelumnya"
                    class="grid h-8 w-8 place-items-center rounded-lg bg-[#f3f6f0] text-sm text-[#193b32] hover:bg-[#e8eee3]">‹</a>
-                <a href="{{ route($scheduleRouteName, $scheduleRouteParameters + ['month' => $nextMonth] + $locationQuery) }}"
+                <a href="{{ route($scheduleRouteName, $scheduleRouteParameters + ['month' => $nextMonth]) }}"
                    aria-label="Bulan berikutnya"
                    class="grid h-8 w-8 place-items-center rounded-lg bg-[#f3f6f0] text-sm text-[#193b32] hover:bg-[#e8eee3]">›</a>
             </div>
@@ -80,7 +60,7 @@
                 <a href="{{ route($scheduleRouteName, $scheduleRouteParameters + [
                     'month' => $monthStart->format('Y-m'),
                     'tanggal' => $dayKey,
-                ] + $locationQuery) }}"
+                ]) }}"
                    aria-label="{{ $day->translatedFormat('j F Y') }}: {{ $daySchedules->count() }} jadwal"
                    @class([
                        'flex min-h-11 flex-col items-center justify-center rounded-lg border text-xs transition sm:min-h-12',
@@ -129,13 +109,7 @@
                             </p>
                             <p class="mt-1 text-[10px] text-gray-500">
                                 {{ $planting?->tanaman?->nama ?? 'Tanaman' }}
-                                @if ($planting?->penanam)
-                                    · {{ $planting->penanam->nama }}
-                                @endif
                             </p>
-                            @if ($planting?->location)
-                                <p class="mt-1 text-[10px] text-gray-500">{{ $planting->location }}</p>
-                            @endif
                         </div>
                         <span @class([
                             'shrink-0 text-[10px] font-semibold',
@@ -161,6 +135,9 @@
                             <span class="inline-flex items-center gap-2 text-[10px] font-semibold text-emerald-700">
                                 <span class="grid h-4 w-4 place-items-center rounded border border-emerald-700 bg-emerald-700 text-[10px] text-white" aria-hidden="true">✓</span>
                                 Sudah dilakukan
+                                @if ($schedule->aktivitasPerawatan?->user)
+                                    oleh {{ $schedule->aktivitasPerawatan->user->nama }}
+                                @endif
                             </span>
                         </div>
                     @endif

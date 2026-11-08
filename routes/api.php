@@ -14,9 +14,11 @@ Route::middleware('web')->prefix('v1')->group(function () {
     Route::get('/tanaman/{tanaman}', [TanamanApiController::class, 'show']);
     Route::get('/penanam', [PenanamApiController::class, 'index']);
     Route::post('/tanaman-tanaman', [TanamanDitanamApiController::class, 'store']);
-    Route::get('/penamans/{penanam}/garden', [KebunApiController::class, 'garden']);
-    Route::get('/penamans/{penanam}/perawatan', [KebunApiController::class, 'care']);
-    Route::patch('/jadwal-perawatan/{perawatan}/complete', [JadwalPerawatanApiController::class, 'complete']);
+    Route::middleware('auth')->group(function () {
+        Route::get('/penamans/{penanam}/garden', [KebunApiController::class, 'garden']);
+        Route::get('/penamans/{penanam}/perawatan', [KebunApiController::class, 'care']);
+        Route::patch('/jadwal-perawatan/{perawatan}/complete', [JadwalPerawatanApiController::class, 'complete']);
+    });
 
     Route::middleware('auth')->prefix('admin')->group(function () {
         foreach ([

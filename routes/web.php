@@ -82,10 +82,6 @@ Route::middleware(['auth', 'user'])->group(function () {
     Route::get('/kebun/{penanam}', [KebunController::class, 'show'])
         ->name('kebun.show');
 
-    Route::post('/kebun/{penanam}/akses', [KebunController::class, 'access'])
-        ->middleware('throttle:10,1')
-        ->name('kebun.access');
-
     Route::patch(
         '/kebun/{penanam}/jadwal/{jadwal}/complete',
         [KebunController::class, 'complete']

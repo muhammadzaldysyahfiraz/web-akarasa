@@ -3,9 +3,9 @@
 @section('content')
     <section class="px-5 py-5 sm:px-8">
         <div class="mx-auto max-w-7xl">
-            <a href="{{ route('penanam.index') }}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">← Ganti kebun</a>
+            <a href="{{ route('tanaman.index') }}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">← Kembali ke katalog</a>
             <div class="mt-5 flex flex-wrap items-end justify-between gap-5">
-                <div><p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Dashboard kebun</p><h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">{{ $penanam->nama }}</h1><p class="mt-1 text-xs text-gray-500">{{ $plantings->count() }} kelompok tanaman tercatat</p></div>
+                <div><p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Kebun bersama</p><h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">Tanaman di Kebun Bersama</h1><p class="mt-1 text-xs text-gray-500">{{ $plantings->count() }} kelompok tanaman tercatat</p><p class="mt-1 text-xs text-gray-500">Semua warga yang masuk dapat melihat dan merawat tanaman.</p></div>
                 <a href="{{ route('tanaman-ditanam.create') }}" class="rounded-lg bg-[#174638] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#285e50]">+ Tambah tanaman</a>
             </div>
         </div>
@@ -38,16 +38,16 @@
                 <p class="mt-3 text-xs text-amber-800">Rentang ini perkiraan, bukan kepastian panen.</p>
             </aside>
         @endif
-        <form method="GET" action="{{ route('kebun.show', $penanam) }}" class="mb-7 flex flex-wrap items-end gap-3 rounded-xl border border-[#e2e8df] bg-white p-4 shadow-sm">
+        <form method="GET" action="{{ route('penanam.index') }}" class="mb-7 flex flex-wrap items-end gap-3 rounded-xl border border-[#e2e8df] bg-white p-4 shadow-sm">
             <label class="text-sm font-bold text-stone-700">Filter jadwal berdasarkan tanggal
                 <input type="date" name="tanggal" value="{{ $selectedDate }}" class="mt-1 block rounded-xl border border-stone-300 px-4 py-2 font-normal">
             </label>
             <button class="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white">Tampilkan</button>
-            @if ($selectedDate)<a href="{{ route('kebun.show', $penanam) }}" class="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-600">Hapus filter</a>@endif
+            @if ($selectedDate)<a href="{{ route('penanam.index') }}" class="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-600">Hapus filter</a>@endif
         </form>
         @if ($plantings->isEmpty())
             <div class="rounded-xl border border-dashed border-stone-300 bg-white px-6 py-16 text-center">
-                <h2 class="font-display text-2xl font-bold text-emerald-950">Kebunmu masih kosong</h2>
+                <h2 class="font-display text-2xl font-bold text-emerald-950">Kebun ini masih kosong</h2>
                 <p class="mt-2 text-stone-500">Tambahkan tanaman pertama untuk mulai membuat jadwal perawatan.</p>
                 <a href="{{ route('tanaman-ditanam.create') }}" class="mt-6 inline-flex rounded-full bg-emerald-800 px-5 py-3 font-bold text-white">Tambah tanaman</a>
             </div>
@@ -62,7 +62,6 @@
                                         <span class="rounded-md bg-white px-3 py-1 text-xs font-bold text-emerald-800">{{ $planting->tanaman->kategori }}</span>
                                         <h2 class="mt-4 font-display text-2xl font-extrabold text-emerald-950">{{ $planting->tanaman->nama }}</h2>
                                         <p class="mt-1 text-sm text-stone-600">{{ $planting->quantity }} tanaman · ditanam {{ $planting->ditanam_at->format('d M Y') }}</p>
-                                        @if ($planting->location)<p class="mt-1 text-sm text-stone-500">{{ $planting->location }}</p>@endif
                                     </div>
                                     <span class="rounded-full bg-emerald-800 px-3 py-1.5 text-xs font-bold text-white">{{ ucfirst($planting->status) }}</span>
                                 </div>
@@ -103,7 +102,7 @@
                                                     <p class="mt-1 text-sm text-stone-500">{{ $schedule->aturanPerawatan->instruksi ?: 'Ikuti panduan perawatan tanaman.' }}</p>
                                                     <p class="mt-1 text-xs font-semibold text-emerald-800">{{ $schedule->perawatan_at->translatedFormat('l, j F Y') }}</p>
                                                 </div>
-                                                <form method="POST" action="{{ route('kebun.complete', [$penanam, $schedule]) }}">
+                                                <form method="POST" action="{{ route('kebun.complete', [$planting->penanam, $schedule]) }}">
                                                     @csrf
                                                     @method('PATCH')
                                                     <button class="whitespace-nowrap rounded-full border border-emerald-700 px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-800 hover:text-white">Tandai selesai</button>
@@ -119,7 +118,15 @@
                                     <summary class="cursor-pointer text-sm font-bold text-emerald-800">Lihat riwayat perawatan</summary>
                                     <ul class="mt-3 space-y-2">
                                         @forelse ($planting->jadwalPerawatan->whereIn('status', ['completed', 'missed'])->sortByDesc('perawatan_at') as $schedule)
-                                            <li class="flex justify-between gap-3 rounded-xl bg-stone-50 px-4 py-3 text-sm"><span>{{ $schedule->aturanPerawatan->nama }} · {{ $schedule->perawatan_at->format('d M Y') }}</span><span class="{{ $schedule->status === 'completed' ? 'text-emerald-700' : 'text-amber-700' }} font-bold">{{ $schedule->status === 'completed' ? 'Selesai' : 'Terlewat' }}</span></li>
+                                            <li class="flex justify-between gap-3 rounded-xl bg-stone-50 px-4 py-3 text-sm">
+                                                <span>
+                                                    {{ $schedule->aturanPerawatan->nama }} · {{ $schedule->perawatan_at->format('d M Y') }}
+                                                    @if ($schedule->aktivitasPerawatan?->user)
+                                                        <span class="block text-xs font-normal text-stone-500">Dilakukan oleh {{ $schedule->aktivitasPerawatan->user->nama }}</span>
+                                                    @endif
+                                                </span>
+                                                <span class="{{ $schedule->status === 'completed' ? 'text-emerald-700' : 'text-amber-700' }} font-bold">{{ $schedule->status === 'completed' ? 'Selesai' : 'Terlewat' }}</span>
+                                            </li>
                                         @empty
                                             <li class="mt-3 text-sm text-stone-500">Belum ada riwayat.</li>
                                         @endforelse

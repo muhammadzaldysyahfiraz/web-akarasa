@@ -27,7 +27,7 @@
                 class="inline-flex items-center gap-2 rounded-lg bg-[#17483B] px-4 py-3 text-[10px] font-bold text-white transition hover:bg-[#10372D]"
             >
                 <span class="text-base leading-none">+</span>
-                Tanam di Kebun Saya
+                Tambah ke Kebun Bersama
             </a>
         @endif
     </div>

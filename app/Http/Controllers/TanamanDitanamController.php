@@ -64,13 +64,12 @@ class TanamanDitanamController extends Controller
 
             $schedules->generateRollingHorizon($planting);
             $request->session()->regenerate();
-            $request->session()->put('garden_access.'.$penanam->id, true);
 
             return $penanam;
         });
 
         return redirect()
-            ->route('kebun.show', $penanam)
-            ->with('status', 'Tanaman berhasil ditambahkan ke kebun.');
+            ->route('penanam.index')
+            ->with('status', 'Tanaman berhasil ditambahkan ke kebun bersama.');
     }
 }

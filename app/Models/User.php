@@ -37,4 +37,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Penanam::class, 'created_by');
     }
+
+    public function aktivitasPerawatan(): HasMany
+    {
+        return $this->hasMany(AktivitasPerawatan::class);
+    }
 }

@@ -49,7 +49,6 @@ class ResourceController extends Controller
         $filters = request()->validate([
             'month' => ['nullable', 'date_format:Y-m'],
             'tanggal' => ['nullable', 'date_format:Y-m-d'],
-            'location' => ['nullable', 'string', 'max:255'],
         ]);
 
         $selectedDate = isset($filters['tanggal'])
@@ -66,19 +65,13 @@ class ResourceController extends Controller
         $scheduleQuery = JadwalPerawatan::query()
             ->with([
                 'tanamanDitanam.tanaman',
-                'tanamanDitanam.penanam',
                 'aturanPerawatan',
-                'aktivitasPerawatan',
+                'aktivitasPerawatan.user',
             ])
             ->whereBetween('perawatan_at', [
                 $monthStart->toDateString(),
                 $monthEnd->toDateString(),
             ]);
-
-        if (! empty($filters['location'])) {
-            $scheduleQuery->whereHas('tanamanDitanam', fn ($query) => $query
-                ->where('location', $filters['location']));
-        }
 
         $monthSchedules = $scheduleQuery
             ->orderBy('perawatan_at')
@@ -97,13 +90,6 @@ class ResourceController extends Controller
             'schedulesByDate' => $monthSchedules->groupBy(
                 fn (JadwalPerawatan $schedule) => $schedule->perawatan_at->toDateString()
             ),
-            'locations' => TanamanDitanam::query()
-                ->whereNotNull('location')
-                ->where('location', '!=', '')
-                ->distinct()
-                ->orderBy('location')
-                ->pluck('location'),
-            'selectedLocation' => $filters['location'] ?? '',
             'canManage' => request()->user()?->role === 'admin',
             'scheduleRouteName' => $scheduleRouteName,
             'scheduleRouteParameters' => $scheduleRouteName === 'admin.resources.index'

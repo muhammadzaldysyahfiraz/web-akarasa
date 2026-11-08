@@ -202,45 +202,6 @@
                         </div>
                     </div>
 
-                    <!-- PILIHAN PERAN -->
-                    <fieldset>
-                        <legend class="mb-1.5 block text-[11px] font-medium text-[#30483D]">
-                            Peran
-                        </legend>
-
-                        <div class="grid grid-cols-2 gap-2">
-
-                            <label class="cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="jenis_pengguna"
-                                    value="warga"
-                                    class="peer sr-only"
-                                    {{ old('jenis_pengguna', 'warga') === 'warga' ? 'checked' : '' }}
-                                >
-
-                                <span class="flex min-h-[36px] items-center justify-center rounded-md border border-[#DCE3DA] bg-white px-3 py-2 text-[11px] font-semibold text-[#78877D] transition peer-checked:border-[#43836A] peer-checked:bg-[#E6EFE5] peer-checked:text-[#286047] peer-focus-visible:ring-2 peer-focus-visible:ring-[#43836A]">
-                                    Warga
-                                </span>
-                            </label>
-
-                            <label class="cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="jenis_pengguna"
-                                    value="tim_kkn"
-                                    class="peer sr-only"
-                                    {{ old('jenis_pengguna') === 'tim_kkn' ? 'checked' : '' }}
-                                >
-
-                                <span class="flex min-h-[36px] items-center justify-center rounded-md border border-[#DCE3DA] bg-white px-3 py-2 text-[11px] font-semibold text-[#78877D] transition peer-checked:border-[#43836A] peer-checked:bg-[#E6EFE5] peer-checked:text-[#286047] peer-focus-visible:ring-2 peer-focus-visible:ring-[#43836A]">
-                                    Tim KKN
-                                </span>
-                            </label>
-
-                        </div>
-                    </fieldset>
-
                     <!-- TOMBOL DAFTAR -->
                     <button
                         type="submit"
@@ -254,7 +215,7 @@
                 <!-- LINK LOGIN -->
                 <p class="mt-3 text-center text-[11px] text-[#7B8C80]">
                     Sudah punya akun?
-                    <a href="{{ route('admin.login') }}"
+                    <a href="{{ route('warga.login') }}"
                        class="ml-1 font-medium text-[#476B58] hover:underline">
                         Masuk
                     </a>

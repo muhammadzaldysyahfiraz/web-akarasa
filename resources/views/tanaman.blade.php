@@ -93,7 +93,7 @@
 
                 <a href="{{ route('penanam.index') }}"
                    class="text-xs font-semibold text-[#17483B]">
-                    Kebunku
+                    Kebun Bersama
                 </a>
             </div>
         </header>
