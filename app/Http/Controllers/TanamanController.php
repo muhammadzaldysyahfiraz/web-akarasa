@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tanaman;
+use App\Models\TanamanDitanam;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -10,10 +11,8 @@ class TanamanController extends Controller
 {
     public function index(): RedirectResponse
     {
-        // Ambil ID tanaman terakhir yang dipilih.
         $tanamanId = session('tanaman_terakhir_dilihat');
 
-        // Jika belum ada tanaman yang dipilih, kembali ke Dashboard.
         if (!$tanamanId) {
             return redirect()->route(
                 auth()->user()->role === 'admin'
@@ -22,11 +21,8 @@ class TanamanController extends Controller
             );
         }
 
-        // Cari tanaman yang terakhir dipilih.
-        $tanaman = Tanaman::where('is_active', true)
-            ->find($tanamanId);
+        $tanaman = Tanaman::where('is_active', true)->find($tanamanId);
 
-        // Jika tanaman sudah tidak aktif atau tidak ditemukan.
         if (!$tanaman) {
             session()->forget('tanaman_terakhir_dilihat');
 
@@ -37,7 +33,6 @@ class TanamanController extends Controller
             );
         }
 
-        // Arahkan ke halaman detail tanaman tersebut.
         return redirect()->route('tanaman.show', $tanaman);
     }
 
@@ -45,13 +40,24 @@ class TanamanController extends Controller
     {
         abort_unless($tanaman->is_active, 404);
 
-        // Simpan tanaman terakhir yang dibuka.
         session(['tanaman_terakhir_dilihat' => $tanaman->id]);
+
+        // Ambil semua data penanaman untuk tanaman yang sedang dibuka.
+        $plantings = TanamanDitanam::query()
+            ->with([
+                'penanam',
+                'jadwalPerawatan.aturanPerawatan',
+                'jadwalPerawatan.aktivitasPerawatan',
+            ])
+            ->where('tanaman_id', $tanaman->id)
+            ->latest('ditanam_at')
+            ->get();
 
         return view('tanaman.show', [
             'tanaman' => $tanaman->load([
                 'aturanPerawatan' => fn ($query) => $query->where('is_active', true),
             ]),
+            'plantings' => $plantings,
         ]);
     }
 }

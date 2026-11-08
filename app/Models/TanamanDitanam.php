@@ -11,12 +11,24 @@ class TanamanDitanam extends Model
     protected $table = 'tanaman_ditanam';
 
     protected $fillable = [
-        'penanam_id', 'tanaman_id', 'ditanam_at', 'quantity', 'location', 'catatan', 'status',
+        'penanam_id',
+        'tanaman_id',
+        'ditanam_at',
+        'quantity',
+        'location',
+        'catatan',
+        'status',
+        'sudah_disiram',
+        'terakhir_disiram_at',
     ];
 
     protected function casts(): array
     {
-        return ['ditanam_at' => 'date'];
+        return [
+            'ditanam_at' => 'date',
+            'terakhir_disiram_at' => 'date',
+            'sudah_disiram' => 'boolean',
+        ];
     }
 
     public function penanam(): BelongsTo

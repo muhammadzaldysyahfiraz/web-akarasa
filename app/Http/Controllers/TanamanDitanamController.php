@@ -18,33 +18,77 @@ class TanamanDitanamController extends Controller
     public function create(): View
     {
         return view('tanaman-ditanam.create', [
-            'tanamans' => Tanaman::query()->where('is_active', true)->orderBy('nama')->get(),
+            'tanamans' => Tanaman::query()
+                ->where('is_active', true)
+                ->orderBy('nama')
+                ->get(),
         ]);
     }
 
-    public function store(Request $request, PerawatanScheduleService $schedules): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        PerawatanScheduleService $schedules
+    ): RedirectResponse {
         $data = $request->validate([
             'penanam_nama' => ['required', 'string', 'max:255'],
             'access_code' => ['required', 'string', 'min:8', 'max:128'],
+
             'tanaman_id' => [
                 'required',
-                Rule::exists('tanaman', 'id')->where('is_active', true)->whereNull('deleted_at'),
+                Rule::exists('tanaman', 'id')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at'),
             ],
-            'ditanam_at' => ['required', 'date', 'before_or_equal:today'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:4294967295'],
+
+            'ditanam_at' => [
+                'required',
+                'date',
+                'before_or_equal:today',
+            ],
+
+            'quantity' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:4294967295',
+            ],
+
             'location' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:5000'],
+
+            'sudah_disiram' => ['required', 'boolean'],
+
+            'terakhir_disiram_at' => [
+                'nullable',
+                'required_if:sudah_disiram,1',
+                'date',
+                'before_or_equal:today',
+                'after_or_equal:ditanam_at',
+            ],
         ]);
 
-        $penanam = DB::transaction(function () use ($data, $request, $schedules): Penanam {
+        $sudahDisiram = (bool) $data['sudah_disiram'];
+
+        $penanam = DB::transaction(function () use (
+            $data,
+            $request,
+            $schedules,
+            $sudahDisiram
+        ): Penanam {
             $penanam = Penanam::query()
                 ->where('nama', $data['penanam_nama'])
                 ->lockForUpdate()
                 ->first();
 
             if ($penanam) {
-                abort_unless(Hash::check($data['access_code'], $penanam->access_code_hash), 403, 'Kode akses kebun tidak sesuai.');
+                abort_unless(
+                    Hash::check(
+                        $data['access_code'],
+                        $penanam->access_code_hash
+                    ),
+                    403,
+                    'Kode akses kebun tidak sesuai.'
+                );
             } else {
                 $penanam = Penanam::create([
                     'nama' => $data['penanam_nama'],
@@ -60,11 +104,20 @@ class TanamanDitanamController extends Controller
                 'location' => $data['location'] ?? null,
                 'catatan' => $data['catatan'] ?? null,
                 'status' => 'bertumbuh',
+
+                'sudah_disiram' => $sudahDisiram,
+                'terakhir_disiram_at' => $sudahDisiram
+                    ? $data['terakhir_disiram_at']
+                    : null,
             ]);
 
             $schedules->generateRollingHorizon($planting);
+
             $request->session()->regenerate();
-            $request->session()->put('garden_access.'.$penanam->id, true);
+            $request->session()->put(
+                'garden_access.'.$penanam->id,
+                true
+            );
 
             return $penanam;
         });

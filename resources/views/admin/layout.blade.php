@@ -77,6 +77,8 @@
 
 @php
     $isDetailTanaman = request()->routeIs('tanaman.show');
+    $isPlantForm = request()->routeIs('admin.resources.create', 'admin.resources.edit')
+        && request()->route('resource') === 'tanaman';
 @endphp
 
 <div class="akarasa-layout">
@@ -179,7 +181,7 @@
     <main class="akarasa-main">
 
         {{-- HEADER ADMIN: TIDAK DITAMPILKAN DI DETAIL TANAMAN --}}
-        @unless ($isDetailTanaman)
+        @unless ($isDetailTanaman || $isPlantForm)
             <header class="flex min-h-[58px] flex-wrap items-center justify-between gap-3 border-b border-[#e2e8df] bg-white px-5 py-3 sm:px-7">
 
                 <div>
@@ -217,7 +219,7 @@
         @endunless
 
         {{-- NOTIFIKASI SISTEM --}}
-        <div class="{{ $isDetailTanaman ? 'px-5 pt-2' : 'px-5 pt-4 sm:px-7' }}">
+        <div class="{{ $isPlantForm ? 'px-5 pt-3 sm:px-7' : ($isDetailTanaman ? 'px-5 pt-2' : 'px-5 pt-4 sm:px-7') }}">
 
             @if (session('status'))
                 <div role="status"
@@ -244,7 +246,7 @@
         </div>
 
         {{-- ISI HALAMAN --}}
-        <div class="{{ $isDetailTanaman ? 'akarasa-content-detail' : 'akarasa-content' }}">
+        <div class="{{ $isPlantForm || $isDetailTanaman ? 'akarasa-content-detail' : 'akarasa-content' }}">
             @yield('content')
         </div>
 
