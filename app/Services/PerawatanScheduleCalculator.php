@@ -10,10 +10,10 @@ use InvalidArgumentException;
 
 class PerawatanScheduleCalculator
 {
-    private const SUPPORTED_TYPES = ['penyiraman', 'pemupukan'];
+    private const SUPPORTED_TYPES = ['penyiraman', 'pemupukan', 'pemangkasan', 'inspeksi', 'lainnya'];
 
     /**
-     * Calculate watering and fertilizing dates from a planted date and care rules.
+     * Calculate care dates from a planting date and the plant's care rules.
      *
      * Rules use the aturan_perawatan column names. A null interval_days creates
      * one occurrence; otherwise occurrences repeat until the end date or horizon.
