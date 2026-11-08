@@ -11,6 +11,7 @@ use App\Models\TanamanDitanam;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use App\Livewire\TanamanKatalog;
 use Tests\TestCase;
@@ -144,6 +145,52 @@ class KebunTogaTest extends TestCase
         $this->assertDatabaseCount('aktivitas_perawatan', 1);
     }
 
+    public function test_plant_detail_shows_the_care_types_checked_in_the_schedule(): void
+    {
+        AturanPerawatan::create([
+            'tanaman_id' => $this->tanaman->id,
+            'nama' => 'Pemupukan kompos',
+            'type' => 'pemupukan',
+            'instruksi' => 'Tambahkan kompos.',
+            'interval_days' => 14,
+            'mulai_setelah_hari' => 0,
+            'is_active' => true,
+        ]);
+
+        $planting = $this->createPlanting();
+        $wateringSchedule = $planting->jadwalPerawatan()
+            ->whereHas('aturanPerawatan', fn ($query) => $query->where('type', 'penyiraman'))
+            ->whereDate('perawatan_at', today())
+            ->firstOrFail();
+        $fertilizingSchedule = $planting->jadwalPerawatan()
+            ->whereHas('aturanPerawatan', fn ($query) => $query->where('type', 'pemupukan'))
+            ->whereDate('perawatan_at', today())
+            ->firstOrFail();
+
+        $warga = User::factory()->create(['role' => 'user']);
+        $this->actingAs($warga)
+            ->withSession(['garden_access.'.$this->penanam->id => true])
+            ->patch(route('kebun.complete', [$this->penanam, $wateringSchedule]))
+            ->assertRedirect(route('kebun.show', $this->penanam));
+
+        $detail = $this->actingAs($warga)
+            ->get(route('tanaman.show', $this->tanaman))
+            ->assertOk()
+            ->assertSee('Riwayat Aktivitas')
+            ->assertSee('Penyiraman rutin')
+            ->assertSee('Siram secukupnya.');
+
+        $this->withSession(['garden_access.'.$this->penanam->id => true])
+            ->patch(route('kebun.complete', [$this->penanam, $fertilizingSchedule]))
+            ->assertRedirect(route('kebun.show', $this->penanam));
+
+        $detail = $this->get(route('tanaman.show', $this->tanaman))
+            ->assertOk()
+            ->assertSee('Penyiraman rutin')
+            ->assertSee('Pemupukan kompos')
+            ->assertSee('Tambahkan kompos.');
+    }
+
     public function test_dashboard_and_private_api_show_only_the_growers_schedule(): void
     {
         $planting = $this->createPlanting();
@@ -186,6 +233,37 @@ class KebunTogaTest extends TestCase
         $admin = User::factory()->create(['email' => 'admin@example.test']);
         $this->actingAs($admin)->get('/admin')->assertOk();
         $this->actingAs($admin)->getJson('/api/v1/admin/tanaman')->assertOk();
+    }
+
+    public function test_admin_can_add_a_plant_with_the_redesigned_form_and_photo_upload(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.resources.create', 'tanaman'))
+            ->assertOk()
+            ->assertSee('Foto Tanaman')
+            ->assertSee('Jenis / Kategori Tanaman')
+            ->assertSee('Catatan Tambahan');
+
+        $this->post(route('admin.resources.store', 'tanaman'), [
+            'nama' => 'Kunyit Ungu',
+            'kategori' => 'Rimpang',
+            'nama_penanam' => 'Pak Rudi',
+            'deskripsi' => 'Tanaman untuk pengujian.',
+            'foto' => \Illuminate\Http\UploadedFile::fake()->create('kunyit-ungu.jpg', 10, 'image/jpeg'),
+        ])->assertRedirect(route('admin.resources.index', 'tanaman'));
+
+        $plant = Tanaman::where('nama', 'Kunyit Ungu')->firstOrFail();
+        $this->assertSame('Belum ditentukan', $plant->kebutuhan_cahaya);
+        $this->assertSame('Belum ditentukan', $plant->kebutuhan_air);
+        $this->assertNotNull($plant->foto_path);
+        Storage::disk('public')->assertExists($plant->foto_path);
+
+        $this->get(route('tanaman.show', $plant))
+            ->assertOk()
+            ->assertSee(Storage::disk('public')->url($plant->foto_path), false);
     }
 
     public function test_admin_can_manage_catalog_growers_and_care_rules(): void

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -128,6 +129,13 @@ class ResourceController extends Controller
     {
         $config = $this->resource($resource);
         $data = $request->validate($this->rules($resource));
+        $photo = $data['foto'] ?? null;
+        unset($data['foto']);
+
+        if ($resource === 'tanaman') {
+            $data['kebutuhan_cahaya'] = $data['kebutuhan_cahaya'] ?? 'Belum ditentukan';
+            $data['kebutuhan_air'] = $data['kebutuhan_air'] ?? 'Belum ditentukan';
+        }
 
         if ($resource === 'penamans') {
             $code = $data['access_code'];
@@ -136,7 +144,11 @@ class ResourceController extends Controller
             $data['created_by'] = $request->user()->id;
         }
 
-        $config['model']::create($data);
+        $item = $config['model']::create($data);
+
+        if ($photo) {
+            $item->update(['foto_path' => $this->storePlantPhoto($photo)]);
+        }
 
         $redirect = redirect()
             ->route('admin.resources.index', $resource)
@@ -165,6 +177,16 @@ class ResourceController extends Controller
         $config = $this->resource($resource);
         $item = $config['model']::findOrFail($id);
         $data = $request->validate($this->rules($resource, $item));
+        $photo = $data['foto'] ?? null;
+        unset($data['foto']);
+
+        if ($resource === 'tanaman') {
+            foreach (['kebutuhan_cahaya', 'kebutuhan_air'] as $field) {
+                if (array_key_exists($field, $data) && $data[$field] === null) {
+                    $data[$field] = $item->{$field};
+                }
+            }
+        }
 
         if ($resource === 'penamans') {
             $code = $data['access_code'] ?? null;
@@ -176,6 +198,16 @@ class ResourceController extends Controller
         }
 
         $item->update($data);
+
+        if ($photo) {
+            $newPhotoPath = $this->storePlantPhoto($photo);
+            $oldPhotoPath = $resource === 'tanaman' ? $item->foto_path : null;
+            $item->update(['foto_path' => $newPhotoPath]);
+
+            if ($oldPhotoPath) {
+                Storage::disk('public')->delete($oldPhotoPath);
+            }
+        }
 
         return redirect()
             ->route('admin.resources.index', $resource)
@@ -230,12 +262,13 @@ class ResourceController extends Controller
                 'nama_ilmiah' => ['nullable', 'string', 'max:255'],
                 'kategori' => ['required', 'string', 'max:255'],
                 'nama_penanam' => ['nullable', 'string', 'max:255'],
+                'foto' => ['nullable', 'image', 'max:5120'],
                 'deskripsi' => ['nullable', 'string'],
                 'manfaat' => ['nullable', 'string'],
                 'panduan_penanaman' => ['nullable', 'string'],
                 'panduan_perawatan' => ['nullable', 'string'],
-                'kebutuhan_cahaya' => ['required', 'string', 'max:255'],
-                'kebutuhan_air' => ['required', 'string', 'max:255'],
+                'kebutuhan_cahaya' => ['nullable', 'string', 'max:255'],
+                'kebutuhan_air' => ['nullable', 'string', 'max:255'],
                 'min_hari_panen' => ['nullable', 'integer', 'min:0', 'max:65535'],
                 'max_hari_panen' => [
                     'nullable',
@@ -277,5 +310,16 @@ class ResourceController extends Controller
                 'is_active' => ['sometimes', 'boolean'],
             ],
         };
+    }
+
+    private function storePlantPhoto(\Illuminate\Http\UploadedFile $photo): string
+    {
+        $path = $photo->store('tanaman', 'public');
+
+        if ($path === false) {
+            throw new \RuntimeException('Foto tanaman gagal disimpan.');
+        }
+
+        return $path;
     }
 }
