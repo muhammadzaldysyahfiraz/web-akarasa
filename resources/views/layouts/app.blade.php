@@ -21,13 +21,13 @@
 
         .akarasa-layout {
             display: grid;
-            grid-template-columns: 173px minmax(0, 1fr);
+            grid-template-columns: 200px minmax(0, 1fr);
             min-height: 100vh;
             width: 100%;
         }
 
         .akarasa-sidebar {
-            width: 173px;
+            width: 200px;
             min-height: 100vh;
             padding: 20px 16px;
             display: flex;
@@ -39,19 +39,23 @@
         .akarasa-main {
             min-width: 0;
             background: #f3f5f0;
+            display: flex;
+            flex-direction: column;
         }
 
         .akarasa-content {
             width: 100%;
             min-width: 0;
             padding: 24px 28px;
+            flex: 1;
         }
 
         .akarasa-content-detail {
             padding: 0;
+            flex: 1;
         }
 
-        @media (max-width: 700px) {
+        @media (max-width: 768px) {
             .akarasa-layout {
                 grid-template-columns: 1fr;
             }
@@ -59,6 +63,7 @@
             .akarasa-sidebar {
                 width: 100%;
                 min-height: auto;
+                padding: 14px 16px;
             }
 
             .akarasa-content {
@@ -73,20 +78,21 @@
 @php
     $user = auth()->user();
 
-    $isAdmin = $user && $user->role === 'admin';
+    $isAdmin = $user?->role === 'admin';
     $isDetailTanaman = request()->routeIs('tanaman.show');
 
-    $namaUser = $user->nama ?? $user->name ?? 'Pengguna';
+    $namaUser = $user?->nama ?? $user?->name ?? 'Pengguna';
 
     $dashboardUrl = $isAdmin
         ? route('admin.dashboard')
         : route('user.dashboard');
 
-    $jadwalUrl = $isAdmin
-        ? route('admin.resources.index', 'aturan-perawatan')
-        : route('jadwal-perawatan.index');
+    $adminLoginUrl = route('admin.login');
 
-    $logoutUrl = route('logout');
+    $hasLogoutRoute = \Illuminate\Support\Facades\Route::has('admin.logout');
+    $logoutUrl = $hasLogoutRoute ? route('admin.logout') : url('/logout');
+
+    $hasNotifications = session('status') or session('success') or $errors->any();
 @endphp
 
 <div class="akarasa-layout">
@@ -94,94 +100,91 @@
     {{-- SIDEBAR --}}
     <aside class="akarasa-sidebar">
 
-        {{-- LOGO --}}
-        <a href="{{ $dashboardUrl }}"
-           class="flex items-center gap-3 px-1">
-
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#b9dc68] text-xl text-[#174638]">
-                🌱
-            </span>
-
-            <span class="text-xl font-bold tracking-wide">
-                Akarasa
-            </span>
-        </a>
-
-        {{-- MENU --}}
-        <nav class="mt-9 flex flex-1 flex-col gap-3">
-
-            {{-- DASHBOARD --}}
-            <a href="{{ $dashboardUrl }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
-               {{ request()->routeIs('admin.dashboard') || (!$isAdmin && request()->routeIs('user.dashboard')) ? 'bg-[#315e50] text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
-
-                <span>▦</span>
-                Dashboard
-            </a>
-
-            {{-- TANAMAN TOGA --}}
-            {{-- Menampilkan tanaman terakhir yang dipilih --}}
-            <a href="{{ route('tanaman.index') }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
-               {{ request()->routeIs('tanaman.*') ? 'bg-[#315e50] text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
-
-                <span>🌿</span>
-                Tanaman TOGA
-            </a>
-
-            {{-- JADWAL PERAWATAN --}}
-            <a href="{{ $jadwalUrl }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
-               {{ ($isAdmin && request()->routeIs('admin.resources.index') && request()->route('resource') === 'aturan-perawatan')
-                    || (!$isAdmin && request()->routeIs('jadwal-perawatan.index'))
-                    ? 'bg-[#315e50] text-white'
-                    : 'text-emerald-100 hover:bg-[#285447]' }}">
-
-                <span>▢</span>
-                Jadwal Perawatan
-            </a>
-
-            {{-- LAPORAN --}}
-            <a href="{{ route('laporan.index') }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
-               {{ request()->routeIs('laporan.index') ? 'bg-[#315e50] text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
-
-                <span>▥</span>
-                Laporan
-            </a>
-
-        </nav>
-
-        {{-- PROFIL --}}
-        <div class="mt-8 border-t border-emerald-800 pt-5">
-
-            <div class="flex items-center gap-3">
-
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#b9dc68] text-xs font-bold text-[#174638]">
-                    {{ mb_strtoupper(mb_substr($namaUser, 0, 2)) }}
+        {{-- LOGO & TOGGLE MOBILE --}}
+        <div class="flex items-center justify-between">
+            <a href="{{ $dashboardUrl }}" class="flex items-center gap-3 px-1">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#b9dc68] text-xl text-[#174638]">
+                    🌱
                 </span>
+                <span class="text-xl font-bold tracking-wide">
+                    Akarasa
+                </span>
+            </a>
 
-                <div class="min-w-0">
-                    <p class="truncate text-xs font-semibold">
-                        {{ $namaUser }}
-                    </p>
+            <button type="button"
+                    id="mobile-menu-toggle"
+                    aria-label="Buka Menu"
+                    class="rounded-lg border border-emerald-700 px-3 py-1.5 text-sm text-emerald-100 hover:bg-[#285447] md:hidden">
+                ☰
+            </button>
+        </div>
 
-                    <p class="text-[10px] text-emerald-200">
-                        {{ $isAdmin ? 'Administrator' : 'Pengguna' }}
-                    </p>
+        {{-- WRAPPER MENU & PROFIL (COLLAPSIBLE DI MOBILE) --}}
+        <div id="sidebar-menu-wrapper" class="hidden flex-1 flex-col justify-between md:flex">
+
+            {{-- MENU --}}
+            <nav class="mt-6 flex flex-col gap-2 md:mt-9 md:gap-3">
+
+                {{-- DASHBOARD --}}
+                <a href="{{ $dashboardUrl }}"
+                   class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+                   {{ request()->routeIs('admin.dashboard') or (!$isAdmin and request()->routeIs('user.dashboard')) ? 'bg-[#315e50] font-semibold text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
+                    <span>▦</span>
+                    Dashboard
+                </a>
+
+                {{-- TANAMAN TOGA --}}
+                <a href="{{ route('tanaman.index') }}"
+                   class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+                   {{ request()->routeIs('tanaman.*') ? 'bg-[#315e50] font-semibold text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
+                    <span>🌿</span>
+                    Katalog Tanaman
+                </a>
+
+                <a href="{{ route('penanam.index') }}"
+                   class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
+                   {{ request()->routeIs('penanam.*', 'kebun.*', 'tanaman-ditanam.*') ? 'bg-[#315e50] font-semibold text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
+                    <span>⌂</span>
+                    Kebunku
+                </a>
+
+            </nav>
+
+            {{-- PROFIL BAWAH SIDEBAR --}}
+            <div class="mt-6 border-t border-emerald-800 pt-5 md:mt-8">
+
+                <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#b9dc68] text-xs font-bold text-[#174638]">
+                        {{ mb_strtoupper(mb_substr($namaUser, 0, 2)) }}
+                    </span>
+
+                    <div class="min-w-0">
+                        <p class="truncate text-xs font-semibold">
+                            {{ $namaUser }}
+                        </p>
+                        <p class="text-[10px] text-emerald-200">
+                            {{ $isAdmin ? 'Administrator' : 'Pengunjung' }}
+                        </p>
+                    </div>
                 </div>
 
+                {{-- TOMBOL LOGIN SEBAGAI ADMIN (HANYA DI BAWAH SINI) --}}
+                <a href="{{ $adminLoginUrl }}"
+                   class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#b9dc68] px-3 py-2 text-xs font-semibold text-[#174638] transition hover:bg-[#a9cf54]">
+                    🔑 Login sebagai Admin
+                </a>
+
+                @if ($user and $hasLogoutRoute)
+                    <form method="POST" action="{{ $logoutUrl }}" class="mt-2">
+                        @csrf
+                        <button type="submit"
+                                class="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-200 transition hover:bg-[#285447]">
+                            ↪ Keluar
+                        </button>
+                    </form>
+                @endif
+
             </div>
-
-            {{-- LOGOUT --}}
-            <form method="POST" action="{{ $logoutUrl }}" class="mt-4">
-                @csrf
-
-                <button type="submit"
-                        class="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-200 hover:bg-[#285447]">
-                    ↪ Keluar
-                </button>
-            </form>
 
         </div>
 
@@ -190,81 +193,63 @@
     {{-- KONTEN KANAN --}}
     <main class="akarasa-main">
 
-        {{-- HEADER --}}
+        {{-- HEADER (TANPA TOMBOL LOGIN ADMIN) --}}
         @unless ($isDetailTanaman)
-
             <header class="flex min-h-[58px] flex-wrap items-center justify-between gap-3 border-b border-[#e2e8df] bg-white px-5 py-3 sm:px-7">
 
                 <div>
                     <p class="text-sm font-bold text-[#193b32]">
-                        {{ $isAdmin && request()->routeIs('admin.resources.index') && request()->route('resource') === 'aturan-perawatan'
+                        {{ $isAdmin and request()->routeIs('admin.resources.index') and request()->route('resource') === 'aturan-perawatan'
                             ? 'Jadwal Perawatan'
-                            : 'Selamat datang, '.$namaUser }}
+                            : 'Selamat datang, ' . $namaUser }}
                     </p>
 
                     <p class="mt-1 text-[10px] text-gray-500">
-                        {{ now()->translatedFormat('l, d F Y') }}
+                        {{ now()->locale('id')->translatedFormat('l, d F Y') }}
                     </p>
                 </div>
 
                 <div class="flex items-center gap-3">
-
-                    <form action="{{ route('tanaman.index') }}"
-                          method="GET"
-                          class="hidden sm:block">
-
-                        <input
-                            type="search"
-                            name="search"
-                            placeholder="Cari tanaman atau warga..."
-                            class="w-52 rounded-lg border-0 bg-[#f3f5f0] px-3 py-2 text-[11px] outline-none focus:ring-2 focus:ring-[#b9dc68]"
-                        >
-                    </form>
-
-                    <button type="button"
-                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f3f5f0]">
+                    <a href="{{ route('tanaman.index') }}"
+                       title="Daftar Tanaman"
+                       class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f3f5f0] text-[#193b32] transition hover:bg-[#e5ebe0]">
                         ♧
-                    </button>
-
+                    </a>
                 </div>
 
             </header>
-
         @endunless
 
         {{-- NOTIFIKASI --}}
-        <div class="{{ $isDetailTanaman ? 'px-5 pt-2' : 'px-6 pt-4' }}">
+        @if ($hasNotifications)
+            <div class="space-y-3 {{ $isDetailTanaman ? 'px-5 pt-3' : 'px-6 pt-4' }}">
 
-            @if (session('status'))
-                <div role="status"
-                     class="rounded-lg border border-green-200 bg-green-100 p-3 text-sm text-green-800">
-                    {{ session('status') }}
-                </div>
-            @endif
+                @if (session('status'))
+                    <div role="status"
+                         class="rounded-lg border border-green-200 bg-green-100 p-3 text-sm text-green-800">
+                        {{ session('status') }}
+                    </div>
+                @endif
 
-            @if (session('success'))
-                <div role="status"
-                     class="rounded-lg border border-green-200 bg-green-100 p-3 text-sm text-green-800">
-                    {{ session('success') }}
-                </div>
-            @endif
+                @if (session('success'))
+                    <div role="status"
+                         class="rounded-lg border border-green-200 bg-green-100 p-3 text-sm text-green-800">
+                        {{ session('success') }}
+                    </div>
+                @endif
 
-            @if (session('new_access_code'))
-                <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    <strong>Kode akses kebun:</strong>
-                    <code class="ml-2 select-all">{{ session('new_access_code') }}</code>
-                </div>
-            @endif
+                @if ($errors->any())
+                    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                        <ul class="list-inside list-disc space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
-            @if ($errors->any())
-                <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                    @foreach ($errors->all() as $error)
-                        <p>{{ $error }}</p>
-                    @endforeach
-                </div>
-            @endif
-
-        </div>
+            </div>
+        @endif
 
         {{-- ISI HALAMAN --}}
         <div class="{{ $isDetailTanaman ? 'akarasa-content-detail' : 'akarasa-content' }}">
@@ -274,6 +259,20 @@
     </main>
 
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.getElementById('mobile-menu-toggle');
+        const menuWrapper = document.getElementById('sidebar-menu-wrapper');
+
+        if (toggleBtn && menuWrapper) {
+            toggleBtn.addEventListener('click', function () {
+                menuWrapper.classList.toggle('hidden');
+                menuWrapper.classList.toggle('flex');
+            });
+        }
+    });
+</script>
 
 </body>
 </html>

@@ -1,19 +1,17 @@
-@extends('layouts.app')
+@extends('layouts.app', ['title' => 'Tambah Tanaman'])
 
 @section('content')
-<section class="mx-auto max-w-5xl px-5 py-7 sm:px-8">
-    <a href="{{ route('tanaman.index') }}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">← Kembali ke katalog</a>
+<section class="mx-auto max-w-3xl px-4 py-6 sm:px-7">
+    <a href="{{ route('penanam.index') }}" class="text-base font-semibold text-emerald-800 underline">Kembali ke daftar kebun</a>
 
-    <div class="mt-4 rounded-xl border border-[#e2e8df] bg-white p-5 shadow-sm sm:p-7">
-        <p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Catat kebunmu</p>
-        <h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">Tambah Tanaman Baru</h1>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-            Gunakan kode akses yang sama untuk menambahkan tanaman ke kebun yang sudah ada. Kode ini dipakai untuk melindungi data kebunmu.
-        </p>
+    <div class="mt-4 rounded-2xl border border-[#e2e8df] bg-white p-5 shadow-sm sm:p-8">
+        <p class="text-sm font-bold uppercase tracking-wide text-emerald-700">Tambah tanaman</p>
+        <h1 class="mt-2 text-3xl font-bold text-[#193b32]">Catat tanaman di kebun</h1>
+        <p class="mt-3 text-base leading-7 text-stone-600">Pilih nama penanam yang sudah ada, atau tulis nama baru. Tidak perlu membuat akun atau PIN.</p>
 
         @if ($errors->any())
-            <div role="alert" class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                <p class="font-bold">Periksa kembali data yang diisi.</p>
+            <div role="alert" class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-base text-red-800">
+                <p class="font-bold">Mohon periksa isian berikut:</p>
                 <ul class="mt-2 list-inside list-disc">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -22,137 +20,105 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('tanaman-ditanam.store') }}" class="mt-6 space-y-5">
+        <form method="POST" action="{{ route('tanaman-ditanam.store') }}" class="mt-6 space-y-6">
             @csrf
 
-            <div class="grid gap-5 sm:grid-cols-2">
-                <label class="block text-sm font-bold text-stone-700">
-                    Nama penanam
-                    <input name="penanam_nama" value="{{ old('penanam_nama') }}" required maxlength="255"
-                        class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                </label>
-
-                <label class="block text-sm font-bold text-stone-700">
-                    Kode akses kebun
-                    <input name="access_code" type="password" required minlength="8" autocomplete="new-password"
-                        class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                    <span class="mt-1 block text-xs font-normal text-stone-500">Minimal 8 karakter. Simpan kode ini untuk akses berikutnya.</span>
-                </label>
+            <div>
+                <label for="penanam_id" class="block text-base font-bold text-stone-800">Nama penanam yang sudah terdaftar</label>
+                <select id="penanam_id" name="penanam_id"
+                    class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-base"
+                    aria-describedby="penanam-help">
+                    <option value="">Pilih nama jika sudah pernah ditambahkan</option>
+                    @foreach ($penanams as $penanam)
+                        <option value="{{ $penanam->id }}" @selected(old('penanam_id') == $penanam->id)>{{ $penanam->nama }}</option>
+                    @endforeach
+                </select>
+                <p id="penanam-help" class="mt-2 text-sm text-stone-600">Nama penanam dapat dilihat pengunjung lain.</p>
             </div>
 
-            <label class="block text-sm font-bold text-stone-700">
-                Tanaman
-                <select name="tanaman_id" required
-                    class="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                    <option value="">Pilih tanaman</option>
+            <div>
+                <label for="penanam_nama_baru" class="block text-base font-bold text-stone-800">Atau tulis nama penanam baru</label>
+                <input id="penanam_nama_baru" name="penanam_nama_baru" value="{{ old('penanam_nama_baru') }}"
+                    maxlength="255" autocomplete="name" placeholder="Contoh: Ibu Siti"
+                    class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 px-4 py-3 text-base">
+            </div>
+
+            <label class="block text-base font-bold text-stone-800">
+                Pilih tanaman
+                <select name="tanaman_id" required class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-base">
+                    <option value="">Pilih dari katalog</option>
                     @foreach ($tanamans as $tanaman)
                         <option value="{{ $tanaman->id }}" @selected(old('tanaman_id', request('tanaman_id')) == $tanaman->id)>
-                            {{ $tanaman->nama }} · {{ $tanaman->kategori }}
+                            {{ $tanaman->nama }} — {{ $tanaman->kategori }}
                         </option>
                     @endforeach
                 </select>
             </label>
 
+            <fieldset>
+                <legend class="text-base font-bold text-stone-800">Tahap pertumbuhan tanaman</legend>
+                <p class="mt-1 text-sm text-stone-600">Pilih kondisi tanaman saat ini. Perkiraan panen akan menyesuaikan.</p>
+                <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                    @foreach (['bibit' => 'Bibit', 'anakan' => 'Anakan', 'dewasa' => 'Dewasa'] as $value => $label)
+                        <label class="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-stone-300 px-4 py-3 text-base">
+                            <input type="radio" name="fase_pertumbuhan" value="{{ $value }}" required
+                                @checked(old('fase_pertumbuhan', 'bibit') === $value) class="h-5 w-5 accent-emerald-800">
+                            {{ $label }}
+                        </label>
+                    @endforeach
+                </div>
+            </fieldset>
+
             <div class="grid gap-5 sm:grid-cols-2">
-                <label class="block text-sm font-bold text-stone-700">
-                    Tanggal tanam
+                <label class="block text-base font-bold text-stone-800">
+                    Tanggal ditanam
                     <input name="ditanam_at" type="date" value="{{ old('ditanam_at', now()->toDateString()) }}"
                         max="{{ now()->toDateString() }}" required
-                        class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                        class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 px-4 py-3 text-base">
                 </label>
-
-                <label class="block text-sm font-bold text-stone-700">
+                <label class="block text-base font-bold text-stone-800">
                     Jumlah tanaman
-                    <input name="quantity" type="number" min="1" max="4294967295"
-                        value="{{ old('quantity', 1) }}" required
-                        class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                    <input name="quantity" type="number" min="1" value="{{ old('quantity', 1) }}"
+                        class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 px-4 py-3 text-base">
                 </label>
             </div>
 
-            <div class="rounded-xl border border-[#e2e8df] bg-[#f8faf6] p-4 sm:p-5">
-                <p class="text-sm font-bold text-stone-700">Status penyiraman awal</p>
-                <p class="mt-1 text-xs text-stone-500">Apakah tanaman sudah disiram setelah ditanam?</p>
+            <details class="rounded-xl border border-stone-200 p-4">
+                <summary class="cursor-pointer text-base font-semibold text-emerald-900">Tambahkan keterangan (opsional)</summary>
+                <label class="mt-4 block text-base font-bold text-stone-800">
+                    Lokasi tanaman
+                    <input name="location" value="{{ old('location') }}" maxlength="255" placeholder="Contoh: teras"
+                        class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 px-4 py-3 text-base">
+                </label>
+                <label class="mt-4 block text-base font-bold text-stone-800">
+                    Catatan
+                    <textarea name="catatan" rows="3" class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 text-base">{{ old('catatan') }}</textarea>
+                </label>
+            </details>
 
-                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
-                    <label class="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
-                        <input type="radio" name="sudah_disiram" value="1"
-                            @checked(old('sudah_disiram', '0') == '1')
-                            class="h-4 w-4 accent-emerald-700">
-                        Sudah disiram
-                    </label>
-
-                    <label class="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
-                        <input type="radio" name="sudah_disiram" value="0"
-                            @checked(old('sudah_disiram', '0') == '0')
-                            class="h-4 w-4 accent-emerald-700">
-                        Belum disiram
-                    </label>
-                </div>
-
-                <div id="tanggal-penyiraman-wrapper" class="mt-4 hidden">
-                    <label class="block text-sm font-bold text-stone-700">
-                        Tanggal terakhir disiram
-                        <input
-                            id="terakhir_disiram_at"
-                            name="terakhir_disiram_at"
-                            type="date"
-                            value="{{ old('terakhir_disiram_at') }}"
-                            max="{{ now()->toDateString() }}"
-                            class="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
-                        >
-                    </label>
-                    <p class="mt-1 text-xs font-normal text-stone-500">
-                        Isi tanggal penyiraman terakhir setelah tanaman ditanam.
-                    </p>
-                </div>
-            </div>
-
-            <label class="block text-sm font-bold text-stone-700">
-                Lokasi (opsional)
-                <input name="location" value="{{ old('location') }}" maxlength="255"
-                    placeholder="Contoh: teras atau halaman belakang"
-                    class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-            </label>
-
-            <label class="block text-sm font-bold text-stone-700">
-                Catatan (opsional)
-                <textarea name="catatan" rows="3"
-                    class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">{{ old('catatan') }}</textarea>
-            </label>
-
-            <div class="flex justify-end">
-                <button type="submit"
-                    class="rounded-lg bg-[#174638] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#285e50]">
-                    Simpan ke kebunku
-                </button>
-            </div>
+            <button type="submit" class="min-h-14 w-full rounded-xl bg-[#174638] px-6 py-3 text-lg font-bold text-white hover:bg-[#285e50]">
+                Simpan tanaman ke Kebunku
+            </button>
         </form>
     </div>
 </section>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const radios = document.querySelectorAll('input[name="sudah_disiram"]');
-        const wrapper = document.getElementById('tanggal-penyiraman-wrapper');
-        const dateInput = document.getElementById('terakhir_disiram_at');
+        const growerSelect = document.getElementById('penanam_id');
+        const newGrowerInput = document.getElementById('penanam_nama_baru');
 
-        function toggleTanggalPenyiraman() {
-            const selected = document.querySelector('input[name="sudah_disiram"]:checked');
-            const sudahDisiram = selected && selected.value === '1';
-
-            wrapper.classList.toggle('hidden', !sudahDisiram);
-            dateInput.required = !!sudahDisiram;
-
-            if (!sudahDisiram) {
-                dateInput.value = '';
+        growerSelect.addEventListener('change', function () {
+            if (growerSelect.value) {
+                newGrowerInput.value = '';
             }
-        }
-
-        radios.forEach(function (radio) {
-            radio.addEventListener('change', toggleTanggalPenyiraman);
         });
 
-        toggleTanggalPenyiraman();
+        newGrowerInput.addEventListener('input', function () {
+            if (newGrowerInput.value.trim()) {
+                growerSelect.value = '';
+            }
+        });
     });
 </script>
 @endsection

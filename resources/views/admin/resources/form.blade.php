@@ -385,53 +385,9 @@
 
         @if ($resource === 'penamans')
 
-            <div class="grid gap-5 sm:grid-cols-2">
-
-                <label class="text-sm font-bold">
-                    Nama penanam
-                    <input
-                        name="nama"
-                        value="{{ old('nama', $item?->nama) }}"
-                        required
-                        class="admin-input"
-                    >
-                </label>
-
-                <label class="text-sm font-bold">
-                    Nomor telepon (opsional)
-                    <input
-                        name="phone"
-                        value="{{ old('phone', $item?->phone) }}"
-                        class="admin-input"
-                    >
-                </label>
-
-            </div>
-
             <label class="block text-sm font-bold">
-                Catatan
-                <textarea
-                    name="catatan"
-                    rows="3"
-                    class="admin-input"
-                >{{ old('catatan', $item?->catatan) }}</textarea>
-            </label>
-
-            <label class="block text-sm font-bold">
-                {{ $item ? 'Kode akses baru (opsional)' : 'Kode akses kebun' }}
-
-                <input
-                    name="access_code"
-                    type="password"
-                    {{ $item ? '' : 'required' }}
-                    minlength="8"
-                    autocomplete="new-password"
-                    class="admin-input"
-                >
-
-                <span class="mt-1 block text-xs font-normal text-stone-500">
-                    Minimal 8 karakter. Kode hanya ditampilkan saat penanam pertama kali dibuat.
-                </span>
+                Nama penanam
+                <input name="nama" value="{{ old('nama', $item?->nama) }}" required maxlength="255" class="admin-input">
             </label>
 
         @else

@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\KebunController;
@@ -8,107 +7,98 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PenanamController;
 use App\Http\Controllers\TanamanController;
 use App\Http\Controllers\TanamanDitanamController;
-use App\Models\Tanaman;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// HALAMAN UTAMA
+// HALAMAN UTAMA (Langsung ke Dashboard tanpa login)
 Route::get('/', function () {
-    return redirect()->route('warga.login');
+    return redirect()->route('user.dashboard');
 })->name('home');
 
-// LOGIN ADMIN
-Route::get('/admin/login', [AuthController::class, 'create'])
-    ->name('admin.login');
+// LOGIN & LOGOUT ADMIN
+Route::get('/login', function () {
+    return view('auth.admin-login');
+})->name('admin.login');
 
-Route::post('/admin/login', [AuthController::class, 'store'])
-    ->middleware('throttle:5,1')
-    ->name('admin.login.store');
+Route::post('/login', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required'],
+    ]);
 
-// LOGIN WARGA
-Route::get('/warga/login', [AuthController::class, 'showWargaLogin'])
-    ->name('warga.login');
+    if (Auth::attempt(array_merge($credentials, ['role' => 'admin']))) {
+        $request->session()->regenerate();
 
-Route::post('/warga/login', [AuthController::class, 'loginWarga'])
-    ->middleware('throttle:5,1')
-    ->name('warga.login.store');
+        return redirect()->route('admin.dashboard');
+    }
 
-// REGISTER WARGA
-Route::get('/register', [AuthController::class, 'showRegister'])
-    ->name('register');
+    return back()->withErrors([
+        'email' => 'Email atau password admin salah.',
+    ])->onlyInput('email');
+})->name('admin.login.store');
 
-Route::post('/register', [AuthController::class, 'register'])
-    ->middleware('throttle:5,1')
-    ->name('register.store');
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
 
-// LOGOUT WARGA
-Route::post('/logout', [AuthController::class, 'destroy'])
-    ->middleware('auth')
-    ->name('logout');
+    return redirect()->route('user.dashboard');
+})->name('admin.logout');
 
 // KATALOG TANAMAN DAN DETAIL
-Route::middleware('auth')->group(function () {
+Route::get('/tanaman', [TanamanController::class, 'index'])
+    ->name('tanaman.index');
 
-    Route::get('/tanaman', [TanamanController::class, 'index'])
-        ->name('tanaman.index');
+Route::get('/tanaman/{tanaman}', [TanamanController::class, 'show'])
+    ->name('tanaman.show');
 
-    Route::get('/tanaman/{tanaman}', [TanamanController::class, 'show'])
-        ->name('tanaman.show');
+Route::get('/laporan', LaporanController::class)
+    ->name('laporan.index');
 
-    Route::get('/jadwal-perawatan', [ResourceController::class, 'schedule'])
-        ->name('jadwal-perawatan.index');
+Route::get('/laporan/pdf', [LaporanController::class, 'pdf'])
+    ->name('laporan.pdf');
 
-    Route::get('/laporan', LaporanController::class)
-        ->name('laporan.index');
-});
+// FITUR WARGA (Tanpa middleware auth & user)
+Route::get('/dashboard', DashboardController::class)
+    ->name('user.dashboard');
 
-// FITUR KHUSUS WARGA
-Route::middleware(['auth', 'user'])->group(function () {
+Route::get('/kebunku', [PenanamController::class, 'index'])
+    ->name('penanam.index');
 
-    // DASHBOARD WARGA
-    Route::get('/dashboard', DashboardController::class)
-        ->name('user.dashboard');
+Route::get('/tanam', [TanamanDitanamController::class, 'create'])
+    ->name('tanaman-ditanam.create');
 
-    // KEBUN SAYA
-    Route::get('/kebunku', [PenanamController::class, 'index'])
-        ->name('penanam.index');
+Route::post('/tanaman-ditanam', [TanamanDitanamController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('tanaman-ditanam.store');
 
-    Route::get('/tanam', [TanamanDitanamController::class, 'create'])
-        ->name('tanaman-ditanam.create');
+Route::get('/kebun/{penanam}', [KebunController::class, 'show'])
+    ->name('kebun.show');
 
-    Route::post('/tanaman-ditanam', [TanamanDitanamController::class, 'store'])
-        ->middleware('throttle:10,1')
-        ->name('tanaman-ditanam.store');
+Route::patch(
+    '/kebun/{penanam}/jadwal/{jadwal}/complete',
+    [KebunController::class, 'complete']
+)->name('kebun.complete');
 
-    Route::get('/kebun/{penanam}', [KebunController::class, 'show'])
-        ->name('kebun.show');
+Route::delete('/kebun/{penanam}/aktivitas/{aktivitas}', [KebunController::class, 'cancelActivity'])
+    ->name('kebun.activity.cancel');
 
-    Route::post('/kebun/{penanam}/akses', [KebunController::class, 'access'])
-        ->middleware('throttle:10,1')
-        ->name('kebun.access');
+Route::post('/kebun/{penanam}/tanaman/{planting}/panen', [KebunController::class, 'harvest'])
+    ->name('kebun.harvest');
 
-    Route::patch(
-        '/kebun/{penanam}/jadwal/{jadwal}/complete',
-        [KebunController::class, 'complete']
-    )->name('kebun.complete');
+Route::delete('/kebun/{penanam}/tanaman/{planting}/panen', [KebunController::class, 'cancelHarvest'])
+    ->name('kebun.harvest.cancel');
 
-    Route::post('/jadwal-perawatan/{jadwal}/aktivitas', [KebunController::class, 'recordActivity'])
-        ->middleware('throttle:10,1')
-        ->name('jadwal-perawatan.record');
-});
-
-// FITUR KHUSUS ADMIN
-Route::middleware(['auth', 'admin'])
-    ->prefix('admin')
+// FITUR ADMIN
+Route::prefix('admin')
     ->name('admin.')
+    ->middleware(['auth', 'admin'])
     ->group(function () {
 
         // DASHBOARD ADMIN
         Route::get('/', DashboardController::class)
             ->name('dashboard');
-
-        // LOGOUT ADMIN
-        Route::post('/logout', [AuthController::class, 'destroy'])
-            ->name('logout');
 
         // DAFTAR DATA
         Route::get('/{resource}', [ResourceController::class, 'index'])
@@ -169,24 +159,3 @@ Route::middleware(['auth', 'admin'])
             ->whereNumber('id')
             ->name('resources.destroy');
     });
-
-// CEK JUMLAH TANAMAN
-Route::get('/cek-tanaman', function () {
-    return response()->json([
-        'total_tanaman' => Tanaman::count(),
-        'tanaman_aktif' => Tanaman::where('is_active', true)->count(),
-        'daftar_tanaman' => Tanaman::where('is_active', true)
-            ->orderBy('nama')
-            ->pluck('nama'),
-    ]);
-});
-
-// HAPUS TANAMAN JAHE, TETAP PERTAHANKAN JAHE MERAH
-Route::get('/hapus-jahe', function () {
-    $jumlah = Tanaman::where('nama', 'Jahe')->delete();
-
-    return response()->json([
-        'pesan' => 'Proses penghapusan selesai',
-        'jumlah_dihapus' => $jumlah,
-    ]);
-});

@@ -32,7 +32,6 @@ class TanamanKatalog extends Component
     {
         $query = Tanaman::query()
             ->where('is_active', true)
-            ->where('nama', '!=', 'Jahe')
             ->when($this->search !== '', function ($query) {
                 $query->where(function ($subQuery) {
                     $subQuery->where('nama', 'like', '%' . $this->search . '%')
@@ -47,7 +46,6 @@ class TanamanKatalog extends Component
         return view('livewire.tanaman-katalog', [
             'tanamans' => $query->paginate(15),
             'kategoriList' => Tanaman::where('is_active', true)
-                ->where('nama', '!=', 'Jahe')
                 ->select('kategori')
                 ->distinct()
                 ->orderBy('kategori')

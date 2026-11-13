@@ -19,6 +19,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AdminApiController extends Controller
 {
@@ -45,6 +46,7 @@ class AdminApiController extends Controller
         $data = $request->validate($this->validationRules($resource));
 
         if ($resource === 'penamans') {
+            $this->ensureGrowerNameIsUnique($data['nama']);
             $code = $data['access_code'];
             unset($data['access_code']);
             $data['access_code_hash'] = Hash::make($code);
@@ -81,6 +83,9 @@ class AdminApiController extends Controller
         $data = $request->validate($rules);
 
         if ($resource === 'penamans') {
+            if (isset($data['nama'])) {
+                $this->ensureGrowerNameIsUnique($data['nama'], (int) $item->getKey());
+            }
             $code = $data['access_code'] ?? null;
             unset($data['access_code']);
             if ($code) {
@@ -186,5 +191,19 @@ class AdminApiController extends Controller
             ],
             default => [],
         };
+    }
+
+    private function ensureGrowerNameIsUnique(string $name, ?int $ignoreId = null): void
+    {
+        $duplicate = Penanam::query()
+            ->whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower(trim($name))])
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists();
+
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'nama' => 'Nama penanam tersebut sudah terdaftar.',
+            ]);
+        }
     }
 }

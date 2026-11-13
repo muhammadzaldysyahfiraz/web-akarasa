@@ -1,13 +1,12 @@
 <?php
 
 use App\Http\Middleware\EnsureUserIsAdmin;
-use App\Http\Middleware\EnsureUserIsRegular;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,17 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-
-        // Pengguna yang belum login diarahkan ke login warga.
-        $middleware->redirectGuestsTo(
-            fn () => route('warga.login')
-        );
-
-        // Daftarkan middleware berdasarkan role.
-        $middleware->alias([
-            'admin' => EnsureUserIsAdmin::class,
-            'user' => EnsureUserIsRegular::class,
-        ]);
+        $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
+        $middleware->redirectGuestsTo(fn (Request $request) => route('admin.login'));
 
         // Pengecualian CSRF untuk endpoint API tertentu.
         $middleware->validateCsrfTokens(except: [

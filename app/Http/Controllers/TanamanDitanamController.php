@@ -10,7 +10,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TanamanDitanamController extends Controller
@@ -18,6 +20,7 @@ class TanamanDitanamController extends Controller
     public function create(): View
     {
         return view('tanaman-ditanam.create', [
+            'penanams' => Penanam::query()->orderBy('nama')->get(['id', 'nama']),
             'tanamans' => Tanaman::query()
                 ->where('is_active', true)
                 ->orderBy('nama')
@@ -30,8 +33,8 @@ class TanamanDitanamController extends Controller
         PerawatanScheduleService $schedules
     ): RedirectResponse {
         $data = $request->validate([
-            'penanam_nama' => ['required', 'string', 'max:255'],
-            'access_code' => ['required', 'string', 'min:8', 'max:128'],
+            'penanam_id' => ['nullable', 'required_without:penanam_nama_baru', 'exists:penanam,id'],
+            'penanam_nama_baru' => ['nullable', 'required_without:penanam_id', 'string', 'max:255'],
 
             'tanaman_id' => [
                 'required',
@@ -46,8 +49,9 @@ class TanamanDitanamController extends Controller
                 'before_or_equal:today',
             ],
 
+            'fase_pertumbuhan' => ['required', Rule::in(['bibit', 'anakan', 'dewasa'])],
             'quantity' => [
-                'required',
+                'sometimes',
                 'integer',
                 'min:1',
                 'max:4294967295',
@@ -55,44 +59,35 @@ class TanamanDitanamController extends Controller
 
             'location' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:5000'],
-
-            'sudah_disiram' => ['required', 'boolean'],
-
-            'terakhir_disiram_at' => [
-                'nullable',
-                'required_if:sudah_disiram,1',
-                'date',
-                'before_or_equal:today',
-                'after_or_equal:ditanam_at',
-            ],
         ]);
 
-        $sudahDisiram = (bool) $data['sudah_disiram'];
+        if (! empty($data['penanam_id']) && ! empty($data['penanam_nama_baru'])) {
+            throw ValidationException::withMessages([
+                'penanam_nama_baru' => 'Pilih penanam yang sudah terdaftar atau masukkan nama baru, jangan keduanya.',
+            ]);
+        }
 
         $penanam = DB::transaction(function () use (
             $data,
-            $request,
-            $schedules,
-            $sudahDisiram
+            $schedules
         ): Penanam {
-            $penanam = Penanam::query()
-                ->where('nama', $data['penanam_nama'])
-                ->lockForUpdate()
-                ->first();
-
-            if ($penanam) {
-                abort_unless(
-                    Hash::check(
-                        $data['access_code'],
-                        $penanam->access_code_hash
-                    ),
-                    403,
-                    'Kode akses kebun tidak sesuai.'
-                );
+            if (! empty($data['penanam_id'])) {
+                $penanam = Penanam::query()->findOrFail($data['penanam_id']);
             } else {
+                $nama = trim($data['penanam_nama_baru']);
+                $duplicate = Penanam::query()
+                    ->whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower($nama)])
+                    ->exists();
+
+                if ($duplicate) {
+                    throw ValidationException::withMessages([
+                        'penanam_nama_baru' => 'Nama penanam tersebut sudah terdaftar. Silakan pilih namanya dari daftar.',
+                    ]);
+                }
+
                 $penanam = Penanam::create([
-                    'nama' => $data['penanam_nama'],
-                    'access_code_hash' => Hash::make($data['access_code']),
+                    'nama' => $nama,
+                    'access_code_hash' => Hash::make(Str::random(64)),
                 ]);
             }
 
@@ -100,24 +95,16 @@ class TanamanDitanamController extends Controller
                 'penanam_id' => $penanam->id,
                 'tanaman_id' => $data['tanaman_id'],
                 'ditanam_at' => $data['ditanam_at'],
-                'quantity' => $data['quantity'],
+                'quantity' => $data['quantity'] ?? 1,
                 'location' => $data['location'] ?? null,
-                'catatan' => $data['catatan'] ?? null,
+                'catatan' => TanamanDitanam::catatanDenganFase(
+                    $data['catatan'] ?? null,
+                    $data['fase_pertumbuhan'],
+                ),
                 'status' => 'bertumbuh',
-
-                'sudah_disiram' => $sudahDisiram,
-                'terakhir_disiram_at' => $sudahDisiram
-                    ? $data['terakhir_disiram_at']
-                    : null,
             ]);
 
             $schedules->generateRollingHorizon($planting);
-
-            $request->session()->regenerate();
-            $request->session()->put(
-                'garden_access.'.$penanam->id,
-                true
-            );
 
             return $penanam;
         });

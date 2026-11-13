@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\KebunApiController;
 use App\Http\Controllers\Api\PenanamApiController;
 use App\Http\Controllers\Api\TanamanApiController;
 use App\Http\Controllers\Api\TanamanDitanamApiController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->prefix('v1')->group(function () {
@@ -18,7 +17,7 @@ Route::middleware('web')->prefix('v1')->group(function () {
     Route::get('/penamans/{penanam}/perawatan', [KebunApiController::class, 'care']);
     Route::patch('/jadwal-perawatan/{perawatan}/complete', [JadwalPerawatanApiController::class, 'complete']);
 
-    Route::middleware('auth')->prefix('admin')->group(function () {
+    Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
         foreach ([
             'tanaman' => 'tanaman',
             'penamans' => 'penamans',
