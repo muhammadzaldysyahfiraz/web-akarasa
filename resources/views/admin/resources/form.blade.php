@@ -9,6 +9,21 @@
         if ($selectedCategory && ! in_array($selectedCategory, $categoryOptions, true)) {
             array_unshift($categoryOptions, $selectedCategory);
         }
+
+        // Otomatis mendeteksi path gambar dari public/images maupun storage/app/public
+        $fotoUrl = null;
+        if (!empty($item?->foto_path)) {
+            $cleanPath = ltrim($item->foto_path, '/');
+            if (str_starts_with($cleanPath, 'http')) {
+                $fotoUrl = $cleanPath;
+            } elseif (file_exists(public_path($cleanPath))) {
+                $fotoUrl = asset($cleanPath);
+            } elseif (file_exists(public_path('storage/' . $cleanPath))) {
+                $fotoUrl = asset('storage/' . $cleanPath);
+            } else {
+                $fotoUrl = asset('storage/' . $cleanPath);
+            }
+        }
     @endphp
 
     <style>
@@ -39,7 +54,7 @@
 
         .plant-photo-drop {
             display: flex;
-            min-height: 132px;
+            min-height: 156px;
             cursor: pointer;
             flex-direction: column;
             align-items: center;
@@ -145,17 +160,17 @@
 
                         <img
                             id="plant-photo-preview"
-                            src="{{ $item?->foto_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($item->foto_path) : 'data:,' }}"
+                            src="{{ $fotoUrl ?? 'data:,' }}"
                             alt="Pratinjau foto tanaman"
-                            class="{{ $item?->foto_path ? 'mb-2 h-16 w-full object-contain' : 'hidden mb-2 h-16 w-full object-contain' }}"
+                            class="{{ $fotoUrl ? 'mb-2 h-32 w-full rounded-md object-contain' : 'hidden mb-2 h-32 w-full rounded-md object-contain' }}"
                         >
 
-                        <span id="plant-photo-placeholder" class="{{ $item?->foto_path ? 'hidden' : 'flex flex-col items-center' }}">
+                        <span id="plant-photo-placeholder" class="{{ $fotoUrl ? 'hidden' : 'flex flex-col items-center' }}">
                             <span class="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#edf4e7] text-base text-emerald-800" aria-hidden="true">◎</span>
                             <span class="text-[9px] font-semibold text-emerald-800">Unggah Foto Tanaman</span>
                         </span>
                         <span id="plant-photo-filename" class="max-w-full truncate text-[8px] text-gray-500">
-                            {{ $item?->foto_path ? basename($item->foto_path) : 'Format PNG, JPG maks 5MB' }}
+                            {{ $item?->foto_path ? basename($item->foto_path) . ' (klik untuk ganti)' : 'Format PNG, JPG maks 5MB' }}
                         </span>
                     </label>
 

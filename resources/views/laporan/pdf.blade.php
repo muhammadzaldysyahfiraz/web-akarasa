@@ -17,14 +17,25 @@
     </style>
 </head>
 <body>
-    <h1>Laporan KebunTOGA</h1>
+    @php
+        $penanam = $report['penanam'] ?? null;
+    @endphp
+
+    <h1>{{ $penanam ? 'Laporan KebunTOGA – ' . $penanam->nama : 'Laporan KebunTOGA' }}</h1>
     <p class="muted">Rekap 7 hari terakhir: {{ $report['periodStart']->format('d-m-Y') }} - {{ $report['periodEnd']->format('d-m-Y') }}</p>
 
     <table class="stats">
-        <tr>
-            <td>Nama penanam <span class="value">{{ $report['growers'] }}</span></td>
-            <td>Kebun aktif <span class="value">{{ $report['activeGardens'] }}</span></td>
-        </tr>
+        @if ($penanam)
+            <tr>
+                <td>Nama penanam <span class="value">{{ $penanam->nama }}</span></td>
+                <td>Total jenis tanaman tercatat <span class="value">{{ $report['plantings']->count() }}</span></td>
+            </tr>
+        @else
+            <tr>
+                <td>Nama penanam <span class="value">{{ $report['growers'] }}</span></td>
+                <td>Kebun aktif <span class="value">{{ $report['activeGardens'] }}</span></td>
+            </tr>
+        @endif
         <tr>
             <td>Tanaman sedang tumbuh <span class="value">{{ $report['activePlantings'] }}</span></td>
             <td>Aktivitas perawatan <span class="value">{{ $report['careActivities'] }}</span></td>
@@ -35,13 +46,43 @@
         </tr>
     </table>
 
+    @if ($penanam)
+        <h2>Daftar tanaman di kebun {{ $penanam->nama }}</h2>
+        <table class="activities">
+            <thead>
+                <tr>
+                    <th>Tanaman</th>
+                    <th>Kategori</th>
+                    <th>Jumlah</th>
+                    <th>Tanggal Tanam</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($report['plantings'] as $planting)
+                    <tr>
+                        <td>{{ $planting->tanaman?->nama ?? 'Tanaman' }}</td>
+                        <td>{{ $planting->tanaman?->kategori ?? '-' }}</td>
+                        <td>{{ $planting->quantity }} tanaman ({{ ucfirst($planting->fase_pertumbuhan) }})</td>
+                        <td>{{ $planting->ditanam_at->format('d-m-Y') }}</td>
+                        <td>{{ $planting->status === 'dipanen' ? 'Sudah dipanen' : 'Sedang tumbuh' }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5">Belum ada tanaman yang dicatat.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    @endif
+
     <h2>Aktivitas perawatan terbaru</h2>
     <table class="activities">
         <thead>
             <tr>
                 <th>Tanggal</th>
                 <th>Tanaman</th>
-                <th>Penanam</th>
+                @if (! $penanam)
+                    <th>Penanam</th>
+                @endif
                 <th>Aktivitas</th>
             </tr>
         </thead>
@@ -50,11 +91,13 @@
                 <tr>
                     <td>{{ $activity->performed_at->format('d-m-Y') }}</td>
                     <td>{{ $activity->tanamanDitanam?->tanaman?->nama ?? 'Tanaman' }}</td>
-                    <td>{{ $activity->tanamanDitanam?->penanam?->nama ?? 'Penanam' }}</td>
+                    @if (! $penanam)
+                        <td>{{ $activity->tanamanDitanam?->penanam?->nama ?? 'Penanam' }}</td>
+                    @endif
                     <td>{{ $activity->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Perawatan' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="4">Belum ada aktivitas perawatan.</td></tr>
+                <tr><td colspan="{{ $penanam ? 3 : 4 }}">Belum ada aktivitas perawatan.</td></tr>
             @endforelse
         </tbody>
     </table>

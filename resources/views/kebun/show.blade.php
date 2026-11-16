@@ -10,9 +10,17 @@
             <h1 class="mt-1 text-3xl font-bold text-[#193b32]">{{ $penanam->nama }}</h1>
             <p class="mt-2 text-base text-stone-600">{{ $plantings->count() }} tanaman tercatat</p>
         </div>
-        <a href="{{ route('tanaman-ditanam.create') }}" class="inline-flex min-h-14 items-center rounded-xl bg-[#174638] px-5 py-3 text-base font-bold text-white hover:bg-[#285e50]">
-            + Tambah tanaman
-        </a>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{{ route('laporan.pdf', ['penanam_id' => $penanam->id]) }}"
+               class="inline-flex min-h-14 items-center rounded-xl border-2 border-[#174638] bg-white px-5 py-3 text-base font-bold text-[#174638] hover:bg-emerald-50">
+                Unduh Laporan PDF
+            </a>
+            <a href="{{ route('tanaman-ditanam.create') }}"
+               class="inline-flex min-h-14 items-center rounded-xl bg-[#174638] px-5 py-3 text-base font-bold text-white hover:bg-[#285e50]">
+                + Tambah tanaman
+            </a>
+        </div>
     </div>
 
     @if ($plantings->isEmpty())

@@ -2,9 +2,27 @@
 
 @section('content')
 @php
+    $isAdmin = auth()->check()
+        && strtolower(trim((string) auth()->user()->role)) === 'admin';
+
     $manfaat = collect(preg_split('/[,;\n]+/', $tanaman->manfaat ?? ''))
         ->map(fn ($item) => trim($item))
         ->filter();
+
+    // Otomatis mendeteksi path gambar dari public/images maupun storage/app/public
+    $fotoUrl = null;
+    if ($tanaman->foto_path) {
+        $cleanPath = ltrim($tanaman->foto_path, '/');
+        if (str_starts_with($cleanPath, 'http')) {
+            $fotoUrl = $cleanPath;
+        } elseif (file_exists(public_path($cleanPath))) {
+            $fotoUrl = asset($cleanPath);
+        } elseif (file_exists(public_path('storage/' . $cleanPath))) {
+            $fotoUrl = asset('storage/' . $cleanPath);
+        } else {
+            $fotoUrl = asset('storage/' . $cleanPath);
+        }
+    }
 @endphp
 
 <section class="mx-auto max-w-4xl px-4 py-6 sm:px-7">
@@ -19,23 +37,31 @@
                     <p class="mt-2 text-base italic text-stone-600">{{ $tanaman->nama_ilmiah }}</p>
                 @endif
             </div>
-            @if (auth()->user()?->role === 'admin')
+
+            @if ($isAdmin)
                 <a href="{{ route('admin.resources.edit', ['resource' => 'tanaman', 'id' => $tanaman->id]) }}"
-                    class="min-h-12 rounded-xl border border-emerald-800 px-4 py-3 text-base font-semibold text-emerald-900">Edit informasi</a>
+                   class="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#174638] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#285e50]">
+                    <span>✎</span>
+                    <span>Edit Tanaman</span>
+                </a>
             @endif
         </div>
 
-        @if ($tanaman->foto_path)
-            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($tanaman->foto_path) }}"
-                alt="{{ $tanaman->nama }}" class="mt-6 max-h-80 w-full rounded-xl object-cover">
+        @if ($fotoUrl)
+            <img src="{{ $fotoUrl }}"
+                 alt="{{ $tanaman->nama }}" class="mt-6 max-h-80 w-full rounded-xl object-cover">
         @endif
 
-        @if ($tanaman->deskripsi)
-            <section class="mt-7">
-                <h2 class="text-xl font-bold text-[#193b32]">Tentang tanaman</h2>
-                <p class="mt-2 text-base leading-7 text-stone-700">{{ $tanaman->deskripsi }}</p>
-            </section>
-        @endif
+        {{-- DESKRIPSI TANAMAN --}}
+        <section class="mt-7 rounded-2xl border border-[#e2e8df] bg-[#fafbf9] p-5">
+            <h2 class="text-xl font-bold text-[#193b32]">Deskripsi Tanaman</h2>
+
+            @if ($tanaman->deskripsi)
+                <p class="mt-2 whitespace-pre-line text-base leading-7 text-stone-700">{{ $tanaman->deskripsi }}</p>
+            @else
+                <p class="mt-2 text-base italic text-stone-500">Deskripsi tanaman belum ditambahkan.</p>
+            @endif
+        </section>
 
         @if ($manfaat->isNotEmpty())
             <section class="mt-7">
@@ -51,11 +77,11 @@
         <section class="mt-7 grid gap-4 sm:grid-cols-2">
             <div class="rounded-xl bg-emerald-50 p-4">
                 <h2 class="text-lg font-bold text-emerald-950">Cahaya</h2>
-                <p class="mt-2 text-base text-stone-700">{{ $tanaman->kebutuhan_cahaya }}</p>
+                <p class="mt-2 text-base text-stone-700">{{ $tanaman->kebutuhan_cahaya ?: 'Belum ditentukan' }}</p>
             </div>
             <div class="rounded-xl bg-emerald-50 p-4">
                 <h2 class="text-lg font-bold text-emerald-950">Air</h2>
-                <p class="mt-2 text-base text-stone-700">{{ $tanaman->kebutuhan_air }}</p>
+                <p class="mt-2 text-base text-stone-700">{{ $tanaman->kebutuhan_air ?: 'Belum ditentukan' }}</p>
             </div>
         </section>
 
@@ -100,7 +126,7 @@
         @endif
 
         <a href="{{ route('tanaman-ditanam.create', ['tanaman_id' => $tanaman->id]) }}"
-            class="mt-8 inline-flex min-h-14 w-full items-center justify-center rounded-xl bg-[#174638] px-5 py-3 text-lg font-bold text-white hover:bg-[#285e50]">
+           class="mt-8 inline-flex min-h-14 w-full items-center justify-center rounded-xl bg-[#174638] px-5 py-3 text-lg font-bold text-white hover:bg-[#285e50]">
             Tambahkan tanaman ini ke Kebunku
         </a>
     </article>

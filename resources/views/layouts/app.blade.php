@@ -168,20 +168,30 @@
                     </div>
                 </div>
 
-                {{-- TOMBOL LOGIN SEBAGAI ADMIN (HANYA DI BAWAH SINI) --}}
-                <a href="{{ $adminLoginUrl }}"
-                   class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#b9dc68] px-3 py-2 text-xs font-semibold text-[#174638] transition hover:bg-[#a9cf54]">
-                    🔑 Login sebagai Admin
-                </a>
-
-                @if ($user and $hasLogoutRoute)
-                    <form method="POST" action="{{ $logoutUrl }}" class="mt-2">
+                {{-- KONDISI TOMBOL LOGIN / LOG OUT ADMIN --}}
+                @if ($isAdmin)
+                    <form method="POST" action="{{ $logoutUrl }}" class="mt-4">
                         @csrf
                         <button type="submit"
-                                class="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-200 transition hover:bg-[#285447]">
-                            ↪ Keluar
+                                class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700">
+                            🚪 Log Out Admin
                         </button>
                     </form>
+                @else
+                    <a href="{{ $adminLoginUrl }}"
+                       class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#b9dc68] px-3 py-2 text-xs font-semibold text-[#174638] transition hover:bg-[#a9cf54]">
+                        🔑 Login sebagai Admin
+                    </a>
+
+                    @if ($user and $hasLogoutRoute)
+                        <form method="POST" action="{{ $logoutUrl }}" class="mt-2">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-200 transition hover:bg-[#285447]">
+                                ↪ Keluar
+                            </button>
+                        </form>
+                    @endif
                 @endif
 
             </div>
