@@ -53,11 +53,11 @@
         <div class="mt-auto hidden border-t border-white/10 px-5 py-5 lg:block">
             <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full bg-[#B7D96B] text-xs font-bold text-[#17483B]">
-                    {{ strtoupper(substr(auth()->user()->nama ?? 'W', 0, 1)) }}
+                    {{ strtoupper(substr(auth()->user()?->nama ?? 'W', 0, 1)) }}
                 </div>
                 <div class="min-w-0">
                     <p class="truncate text-[11px] font-semibold">
-                        {{ auth()->user()->nama ?? 'Warga Akarasa' }}
+                        {{ auth()->user()?->nama ?? 'Warga Akarasa' }}
                     </p>
                     <p class="text-[9px] text-[#C4D8CC]">Koordinator KKN</p>
                 </div>
@@ -73,7 +73,7 @@
         <header class="flex items-center justify-between gap-4 border-b border-stone-100 bg-white px-5 py-4 sm:px-8 lg:px-10">
             <div>
                 <p class="text-xs font-semibold text-[#25463B]">
-                    Selamat pagi, {{ auth()->user()->nama ?? 'Warga' }}
+                    Selamat pagi, {{ auth()->user()?->nama ?? 'Warga' }}
                 </p>
                 <p class="mt-1 text-[9px] text-stone-400">
                     {{ now()->locale('id')->translatedFormat('l, d F Y') }}

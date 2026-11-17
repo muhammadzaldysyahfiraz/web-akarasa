@@ -3,7 +3,7 @@
 @section('content')
 @php
     $isAdmin = auth()->check()
-        && strtolower(trim((string) auth()->user()->role)) === 'admin';
+        && strtolower(trim((string) auth()->user()?->role)) === 'admin';
 
     $manfaat = collect(preg_split('/[,;\n]+/', $tanaman->manfaat ?? ''))
         ->map(fn ($item) => trim($item))

@@ -8,12 +8,13 @@ use App\Models\JadwalPerawatan;
 use App\Models\Penanam;
 use App\Models\Tanaman;
 use App\Models\TanamanDitanam;
+use App\Services\DashboardReportService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(DashboardReportService $reportService): View
     {
         $adminLoginUrl = Route::has('admin.login')
             ? route('admin.login')
@@ -21,6 +22,7 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', [
             'adminLoginUrl' => $adminLoginUrl,
+            'report' => $reportService->summary(),
             'counts' => [
                 'tanaman' => Tanaman::where('is_active', true)->count(),
                 'penanam' => Penanam::count(),

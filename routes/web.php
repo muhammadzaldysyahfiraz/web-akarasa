@@ -22,6 +22,8 @@ Route::get('/login', function () {
     return view('auth.admin-login');
 })->name('login');
 
+Route::get('/admin/login', function () { return view('auth.admin-login'); })->name('admin.login');
+
 Route::post('/login', function (Request $request) {
     $credentials = $request->validate([
         'email' => ['required', 'email'],
@@ -58,6 +60,9 @@ Route::get('/jadwal-perawatan', [ResourceController::class, 'schedule'])
 
 Route::get('/laporan', LaporanController::class)
     ->name('laporan.index');
+
+Route::get('/laporan/pdf', [LaporanController::class, 'pdf'])
+    ->name('laporan.pdf');
 
 // FITUR WARGA (Tanpa middleware auth & user)
 Route::get('/dashboard', DashboardController::class)

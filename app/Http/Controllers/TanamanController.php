@@ -9,13 +9,25 @@ use Illuminate\View\View;
 
 class TanamanController extends Controller
 {
-    public function index(): RedirectResponse
+    public function index(): View|RedirectResponse
     {
+        if (view()->exists('tanaman.index')) {
+            return view('tanaman.index', [
+                'tanamans' => Tanaman::where('is_active', true)->orderBy('nama')->get(),
+            ]);
+        }
+
+        if (view()->exists('tanaman')) {
+            return view('tanaman', [
+                'tanamans' => Tanaman::where('is_active', true)->orderBy('nama')->get(),
+            ]);
+        }
+
         $tanamanId = session('tanaman_terakhir_dilihat');
 
         if (!$tanamanId) {
             return redirect()->route(
-                auth()->user()->role === 'admin'
+                auth()->user()?->role === 'admin'
                     ? 'admin.dashboard'
                     : 'user.dashboard'
             );
@@ -27,7 +39,7 @@ class TanamanController extends Controller
             session()->forget('tanaman_terakhir_dilihat');
 
             return redirect()->route(
-                auth()->user()->role === 'admin'
+                auth()->user()?->role === 'admin'
                     ? 'admin.dashboard'
                     : 'user.dashboard'
             );
@@ -42,7 +54,6 @@ class TanamanController extends Controller
 
         session(['tanaman_terakhir_dilihat' => $tanaman->id]);
 
-        // Ambil semua data penanaman untuk tanaman yang sedang dibuka.
         $plantings = TanamanDitanam::query()
             ->with([
                 'penanam',

@@ -1,6 +1,6 @@
 @php
     $isAdminPage = auth()->check()
-        && strtolower(trim((string) auth()->user()->role)) === 'admin';
+        && strtolower(trim((string) auth()->user()?->role)) === 'admin';
 
     $gambarTanaman = [
         'jahe merah' => 'jahe merah.jpg',

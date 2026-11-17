@@ -21,7 +21,7 @@
         </div>
 
         {{-- TAMBAH TANAMAN KE KEBUN WARGA --}}
-        @if (auth()->user()->role === 'user' && Route::has('tanaman-ditanam.create'))
+        @if ((auth()->user()?->role !== 'admin') && Route::has('tanaman-ditanam.create'))
             <a
                 href="{{ route('tanaman-ditanam.create') }}"
                 class="inline-flex items-center gap-2 rounded-lg bg-[#17483B] px-4 py-3 text-[10px] font-bold text-white transition hover:bg-[#10372D]"

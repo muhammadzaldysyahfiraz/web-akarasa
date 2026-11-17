@@ -152,12 +152,12 @@
                    class="flex items-center gap-3">
 
                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#b9dc68] text-xs font-bold text-[#174238]">
-                        {{ mb_strtoupper(mb_substr(auth()->user()->nama, 0, 2)) }}
+                        {{ mb_strtoupper(mb_substr(auth()->user()?->nama, 0, 2)) }}
                     </span>
 
                     <span class="min-w-0">
                         <span class="block truncate text-xs font-semibold">
-                            {{ auth()->user()->nama }}
+                            {{ auth()->user()?->nama }}
                         </span>
 
                         <span class="block text-[10px] text-emerald-200">
@@ -196,7 +196,7 @@
 
                 <div>
                     <p class="text-xs font-bold text-[#193b32]">
-                        Selamat pagi, {{ auth()->user()->nama }}
+                        Selamat pagi, {{ auth()->user()?->nama }}
                     </p>
 
                     <p class="mt-0.5 text-[10px] text-gray-500">
