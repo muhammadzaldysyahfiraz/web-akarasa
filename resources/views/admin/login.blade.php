@@ -72,23 +72,6 @@
 
             <div class="w-full max-w-[420px]">
 
-                <div class="mb-6">
-                    <p class="mb-2 text-[10px] font-medium text-[#7B8C80]">
-                        Pilih jenis akun untuk masuk
-                    </p>
-                    <nav aria-label="Pilih jenis login" class="grid grid-cols-2 gap-2">
-                        <a href="{{ route('warga.login') }}"
-                           class="rounded-md border border-[#DCE3DA] bg-white px-3 py-2.5 text-center text-xs font-semibold text-[#476B58] transition hover:border-[#43836A]">
-                            Login sebagai warga
-                        </a>
-                        <a href="{{ route('admin.login') }}"
-                           aria-current="page"
-                           class="rounded-md bg-[#17483B] px-3 py-2.5 text-center text-xs font-semibold text-white">
-                            Login sebagai admin
-                        </a>
-                    </nav>
-                </div>
-
                 <!-- Judul form -->
                 <div class="mb-6">
                     <p class="mb-2 text-[9px] font-bold uppercase tracking-wide text-[#42775B]">
@@ -100,7 +83,7 @@
                     </h2>
 
                     <p class="mt-2 text-[10px] leading-5 text-[#7B8C80] sm:text-xs">
-                        Masukkan nama admin dan kata sandi bersama administrator.
+                        Gunakan akun Anda untuk melanjutkan pemantauan.
                     </p>
                 </div>
 
@@ -128,11 +111,11 @@
                 <form method="POST" action="{{ route('admin.login.store') }}">
                     @csrf
 
-                    <!-- Nama admin -->
+                    <!-- Email -->
                     <div class="mb-4">
-                        <label for="nama"
+                        <label for="email"
                                class="mb-1.5 block text-[10px] font-medium text-[#30483D]">
-                            Nama admin
+                            Email
                         </label>
 
                         <div class="relative">
@@ -142,20 +125,21 @@
                                  stroke="currentColor"
                                  stroke-width="1.5"
                                  class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8C9B91]">
+                                <rect x="3" y="5" width="18" height="14" rx="2"/>
                                 <path stroke-linecap="round"
                                       stroke-linejoin="round"
-                                      d="M15 19.128a9.38 9.38 0 0 0 3.75.774 9.75 9.75 0 0 0 4.5-1.092 6.75 6.75 0 0 0-12.75 0m5.25-9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM3 20.25a6.75 6.75 0 0 1 10.5-5.625"/>
+                                      d="m3 7 9 6 9-6"/>
                             </svg>
 
                             <input
-                                id="nama"
-                                type="text"
-                                name="nama"
-                                value="{{ old('nama') }}"
+                                id="email"
+                                type="email"
+                                name="email"
+                                value="{{ old('email') }}"
                                 required
                                 autofocus
                                 autocomplete="username"
-                                placeholder="Nama admin"
+                                placeholder="nama@email.com"
                                 class="w-full rounded-md border border-[#DCE3DA] bg-white py-2.5 pl-9 pr-3 text-xs text-[#30483D] outline-none transition placeholder:text-[#9AA69D] focus:border-[#43836A] focus:ring-2 focus:ring-[#43836A]/10"
                             >
                         </div>
@@ -165,7 +149,7 @@
                     <div class="mb-3">
                         <label for="password"
                                class="mb-1.5 block text-[10px] font-medium text-[#30483D]">
-                            Kata sandi bersama admin
+                            Kata sandi
                         </label>
 
                         <div class="relative">
@@ -187,7 +171,7 @@
                                 name="password"
                                 required
                                 autocomplete="current-password"
-                                placeholder="Kata sandi admin bersama"
+                                placeholder="Masukkan kata sandi"
                                 class="w-full rounded-md border border-[#DCE3DA] bg-white py-2.5 pl-9 pr-3 text-xs text-[#30483D] outline-none transition placeholder:text-[#9AA69D] focus:border-[#43836A] focus:ring-2 focus:ring-[#43836A]/10"
                             >
                         </div>
@@ -227,8 +211,13 @@
 
                 </form>
 
+                <!-- Link register -->
                 <p class="mt-4 text-center text-[10px] text-[#7B8C80] sm:text-[11px]">
-                    Akses administrator hanya untuk akun yang telah terdaftar.
+                    Belum punya akun?
+                    <a href="{{ route('register') }}"
+                       class="ml-1 font-medium text-[#476B58] hover:underline">
+                        Daftar sekarang
+                    </a>
                 </p>
 
             </div>

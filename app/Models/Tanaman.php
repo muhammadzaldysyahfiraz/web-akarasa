@@ -17,7 +17,6 @@ class Tanaman extends Model
         'nama_ilmiah',
         'kategori',
         'nama_penanam',
-        'foto_path',
         'deskripsi',
         'manfaat',
         'panduan_penanaman',

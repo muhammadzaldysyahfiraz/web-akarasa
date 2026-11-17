@@ -3,20 +3,13 @@
         && strtolower(trim((string) auth()->user()->role)) === 'admin';
 
     $gambarTanaman = [
-        'Daun Mint' => 'daun mint.jpg',
-        'Daun Pandan' => 'daun pandan.jpg',
-        'Jahe Merah' => 'jahe merah.jpg',
-        'Kemangi' => 'kemangi.jpg',
-        'Kencur' => 'kencur.jpg',
-        'Kumis Kucing' => 'kumis kucing.jpg',
-        'Kunyit' => 'kunyit.jpg',
-        'Lengkuas' => 'lengkuas.jpg',
-        'Lidah Buaya' => 'lidah buaya.jpg',
-        'Rosella' => 'rosella.jpg',
-        'Sambiloto' => 'sambiloto.jpg',
-        'Seledri' => 'seledri.jpg',
-        'Serai' => 'serai.jpg',
-        'Temulawak' => 'temulawak.jpg',
+        'jahe merah' => 'jahe merah.jpg',
+        'jahe putih' => 'jahe putih.webp',
+        'kucai' => 'kucai.jpg',
+        'Kunyit-putih' => 'Kunyit-putih.jpg',
+        'Lengkuas' => 'Lengkuas.webp',
+        'temukunci' => 'temukunci.jpg',
+        'temulawak' => 'temulawak.jpg',
     ];
 @endphp
 
@@ -121,16 +114,6 @@
                        class="block text-base font-bold text-[#193b32] transition hover:text-[#6b963e]">
                         {{ $tanaman->nama }}
                     </a>
-
-                    <p class="mt-1 text-xs italic text-gray-400">
-                        {{ $tanaman->nama_ilmiah ?: 'Nama ilmiah belum tersedia' }}
-                    </p>
-
-                    @if ($tanaman->deskripsi)
-                        <p class="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-500">
-                            {{ $tanaman->deskripsi }}
-                        </p>
-                    @endif
 
                     {{-- TOMBOL --}}
                     <div class="mt-4 flex items-center justify-between border-t border-[#edf0eb] pt-3">

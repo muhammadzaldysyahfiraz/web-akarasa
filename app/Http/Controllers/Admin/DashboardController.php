@@ -8,13 +8,19 @@ use App\Models\JadwalPerawatan;
 use App\Models\Penanam;
 use App\Models\Tanaman;
 use App\Models\TanamanDitanam;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function __invoke(): View
     {
+        $adminLoginUrl = Route::has('admin.login')
+            ? route('admin.login')
+            : (Route::has('login') ? route('login') : url('/login'));
+
         return view('admin.dashboard', [
+            'adminLoginUrl' => $adminLoginUrl,
             'counts' => [
                 'tanaman' => Tanaman::where('is_active', true)->count(),
                 'penanam' => Penanam::count(),
@@ -22,15 +28,13 @@ class DashboardController extends Controller
                 'jadwal' => JadwalPerawatan::where('status', 'pending')->count(),
                 'aturan' => AturanPerawatan::count(),
             ],
-            // Mengambil semua tanaman aktif
             'featuredPlants' => Tanaman::where('is_active', true)
                 ->orderBy('nama')
                 ->get(),
-
             'upcoming' => JadwalPerawatan::with([
                     'tanamanDitanam.tanaman',
                     'tanamanDitanam.penanam',
-                    'aturanPerawatan'
+                    'aturanPerawatan',
                 ])
                 ->where('status', 'pending')
                 ->orderBy('perawatan_at')

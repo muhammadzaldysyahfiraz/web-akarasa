@@ -4,16 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AturanPerawatan;
-use App\Models\JadwalPerawatan;
 use App\Models\Penanam;
 use App\Models\Tanaman;
-use App\Models\TanamanDitanam;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -28,89 +24,9 @@ class ResourceController extends Controller
     public function index(string $resource): View
     {
         $config = $this->resource($resource);
-        $items = $config['model']::query()
-            ->when($resource === 'aturan-perawatan', fn ($query) => $query->with('tanaman'))
-            ->latest()
-            ->paginate(15);
-
-        if ($resource === 'aturan-perawatan') {
-            return $this->scheduleCalendar($resource, $config, $items);
-        }
+        $items = $config['model']::query()->latest()->paginate(15);
 
         return view('admin.resources.index', compact('resource', 'config', 'items'));
-    }
-
-    public function schedule(): View
-    {
-        return $this->index('aturan-perawatan');
-    }
-
-    private function scheduleCalendar(string $resource, array $config, $items): View
-    {
-        $filters = request()->validate([
-            'month' => ['nullable', 'date_format:Y-m'],
-            'tanggal' => ['nullable', 'date_format:Y-m-d'],
-            'location' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $selectedDate = isset($filters['tanggal'])
-            ? CarbonImmutable::parse($filters['tanggal'])
-            : (isset($filters['month'])
-                ? CarbonImmutable::parse($filters['month'].'-01')
-                : CarbonImmutable::today());
-        $monthStart = $selectedDate->startOfMonth();
-        $monthEnd = $monthStart->endOfMonth();
-        $calendarStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
-        $calendarDays = collect(range(0, 41))
-            ->map(fn (int $offset) => $calendarStart->addDays($offset));
-
-        $scheduleQuery = JadwalPerawatan::query()
-            ->with([
-                'tanamanDitanam.tanaman',
-                'tanamanDitanam.penanam',
-                'aturanPerawatan',
-                'aktivitasPerawatan',
-            ])
-            ->whereBetween('perawatan_at', [
-                $monthStart->toDateString(),
-                $monthEnd->toDateString(),
-            ]);
-
-        if (! empty($filters['location'])) {
-            $scheduleQuery->whereHas('tanamanDitanam', fn ($query) => $query
-                ->where('location', $filters['location']));
-        }
-
-        $monthSchedules = $scheduleQuery
-            ->orderBy('perawatan_at')
-            ->get();
-        $scheduleRouteName = request()->routeIs('admin.resources.index')
-            ? 'admin.resources.index'
-            : 'jadwal-perawatan.index';
-
-        return view('admin.resources.schedule', [
-            'resource' => $resource,
-            'config' => $config,
-            'items' => $items,
-            'selectedDate' => $selectedDate,
-            'monthStart' => $monthStart,
-            'calendarDays' => $calendarDays,
-            'schedulesByDate' => $monthSchedules->groupBy(
-                fn (JadwalPerawatan $schedule) => $schedule->perawatan_at->toDateString()
-            ),
-            'locations' => TanamanDitanam::query()
-                ->whereNotNull('location')
-                ->where('location', '!=', '')
-                ->distinct()
-                ->orderBy('location')
-                ->pluck('location'),
-            'selectedLocation' => $filters['location'] ?? '',
-            'canManage' => request()->user()?->role === 'admin',
-            'scheduleRouteName' => $scheduleRouteName,
-            'scheduleRouteParameters' => $scheduleRouteName === 'admin.resources.index'
-                ? ['resource' => $resource]
-                : [],
-        ]);
     }
 
     public function create(string $resource): View
@@ -129,13 +45,6 @@ class ResourceController extends Controller
     {
         $config = $this->resource($resource);
         $data = $request->validate($this->rules($resource));
-        $photo = $data['foto'] ?? null;
-        unset($data['foto']);
-
-        if ($resource === 'tanaman') {
-            $data['kebutuhan_cahaya'] = $data['kebutuhan_cahaya'] ?? 'Belum ditentukan';
-            $data['kebutuhan_air'] = $data['kebutuhan_air'] ?? 'Belum ditentukan';
-        }
 
         if ($resource === 'penamans') {
             $code = $data['access_code'];
@@ -144,11 +53,7 @@ class ResourceController extends Controller
             $data['created_by'] = $request->user()->id;
         }
 
-        $item = $config['model']::create($data);
-
-        if ($photo) {
-            $item->update(['foto_path' => $this->storePlantPhoto($photo)]);
-        }
+        $config['model']::create($data);
 
         $redirect = redirect()
             ->route('admin.resources.index', $resource)
@@ -177,16 +82,6 @@ class ResourceController extends Controller
         $config = $this->resource($resource);
         $item = $config['model']::findOrFail($id);
         $data = $request->validate($this->rules($resource, $item));
-        $photo = $data['foto'] ?? null;
-        unset($data['foto']);
-
-        if ($resource === 'tanaman') {
-            foreach (['kebutuhan_cahaya', 'kebutuhan_air'] as $field) {
-                if (array_key_exists($field, $data) && $data[$field] === null) {
-                    $data[$field] = $item->{$field};
-                }
-            }
-        }
 
         if ($resource === 'penamans') {
             $code = $data['access_code'] ?? null;
@@ -198,16 +93,6 @@ class ResourceController extends Controller
         }
 
         $item->update($data);
-
-        if ($photo) {
-            $newPhotoPath = $this->storePlantPhoto($photo);
-            $oldPhotoPath = $resource === 'tanaman' ? $item->foto_path : null;
-            $item->update(['foto_path' => $newPhotoPath]);
-
-            if ($oldPhotoPath) {
-                Storage::disk('public')->delete($oldPhotoPath);
-            }
-        }
 
         return redirect()
             ->route('admin.resources.index', $resource)
@@ -262,13 +147,12 @@ class ResourceController extends Controller
                 'nama_ilmiah' => ['nullable', 'string', 'max:255'],
                 'kategori' => ['required', 'string', 'max:255'],
                 'nama_penanam' => ['nullable', 'string', 'max:255'],
-                'foto' => ['nullable', 'image', 'max:5120'],
                 'deskripsi' => ['nullable', 'string'],
                 'manfaat' => ['nullable', 'string'],
                 'panduan_penanaman' => ['nullable', 'string'],
                 'panduan_perawatan' => ['nullable', 'string'],
-                'kebutuhan_cahaya' => ['nullable', 'string', 'max:255'],
-                'kebutuhan_air' => ['nullable', 'string', 'max:255'],
+                'kebutuhan_cahaya' => ['required', 'string', 'max:255'],
+                'kebutuhan_air' => ['required', 'string', 'max:255'],
                 'min_hari_panen' => ['nullable', 'integer', 'min:0', 'max:65535'],
                 'max_hari_panen' => [
                     'nullable',
@@ -310,16 +194,5 @@ class ResourceController extends Controller
                 'is_active' => ['sometimes', 'boolean'],
             ],
         };
-    }
-
-    private function storePlantPhoto(\Illuminate\Http\UploadedFile $photo): string
-    {
-        $path = $photo->store('tanaman', 'public');
-
-        if ($path === false) {
-            throw new \RuntimeException('Foto tanaman gagal disimpan.');
-        }
-
-        return $path;
     }
 }

@@ -2,31 +2,27 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = env('ADMIN_PASSWORD');
-        $generatedPassword = ! is_string($password) || $password === '';
-        $password = $generatedPassword ? Str::password(24) : $password;
-        $email = env('ADMIN_EMAIL', 'admin@kebuntoga.local');
+        $data = [
+            'nama' => 'Admin Akarasa',
+            'password' => 'admin123',
+            'role' => 'admin',
+        ];
 
-        \App\Models\User::updateOrCreate(
-            ['email' => $email],
-            [
-                'nama' => 'Administrator',
-                'password' => Hash::make($password),
-            ],
-        );
-
-        if ($generatedPassword) {
-            $this->command?->warn("Kredensial admin sementara (simpan dengan aman): {$email} / {$password}");
+        if (Schema::hasColumn('users', 'nim_nip')) {
+            $data['nim_nip'] = '00000001';
         }
 
-        $this->call(TanamanSeeder::class);
+        User::updateOrCreate(
+            ['email' => 'admin@akarasa.com'],
+            $data
+        );
     }
 }

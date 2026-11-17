@@ -147,31 +147,41 @@
         {{-- PROFIL SIDEBAR --}}
         <div class="mt-8 border-t border-emerald-800 pt-4">
 
-            <a href="{{ route('admin.dashboard') }}"
-               class="flex items-center gap-3">
+            @auth
+                <a href="{{ route('admin.dashboard') }}"
+                   class="flex items-center gap-3">
 
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#b9dc68] text-xs font-bold text-[#174238]">
-                    {{ mb_strtoupper(mb_substr(auth()->user()->nama, 0, 2)) }}
-                </span>
-
-                <span class="min-w-0">
-                    <span class="block truncate text-xs font-semibold">
-                        {{ auth()->user()->nama }}
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#b9dc68] text-xs font-bold text-[#174238]">
+                        {{ mb_strtoupper(mb_substr(auth()->user()->nama, 0, 2)) }}
                     </span>
 
-                    <span class="block text-[10px] text-emerald-200">
-                        Koordinator KKN
+                    <span class="min-w-0">
+                        <span class="block truncate text-xs font-semibold">
+                            {{ auth()->user()->nama }}
+                        </span>
+
+                        <span class="block text-[10px] text-emerald-200">
+                            Koordinator KKN
+                        </span>
                     </span>
-                </span>
-            </a>
+                </a>
 
-            <form method="POST" action="{{ route('admin.logout') }}" class="mt-4">
-                @csrf
+                <form method="POST" action="{{ route('admin.logout') }}" class="mt-4">
+                    @csrf
 
-                <button class="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-200 hover:bg-[#285447]">
-                    ↪ Keluar
-                </button>
-            </form>
+                    <button type="submit"
+                            class="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-red-700">
+                        <span>🚪</span>
+                        <span>Log Out Admin</span>
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('login') }}"
+                   class="flex w-full items-center justify-center gap-2 rounded-lg bg-[#b9dc68] px-3 py-2.5 text-xs font-semibold text-[#174238] transition hover:opacity-90">
+                    <span>🔑</span>
+                    <span>Login sebagai Admin</span>
+                </a>
+            @endauth
 
         </div>
 
