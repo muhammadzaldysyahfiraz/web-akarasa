@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="bg-emerald-950 px-5 py-12 text-white sm:px-8 sm:py-16">
+    <section style="background-color: #193b32; color: #ffffff;" class="rounded-3xl px-6 py-10 shadow-sm sm:px-10 sm:py-12">
         <div class="mx-auto max-w-7xl">
-            <p class="text-sm font-bold uppercase tracking-[.16em] text-lime-300">Pantau kebun rumah</p>
+            <p class="text-sm font-bold uppercase tracking-[.16em] text-[#bef264]" style="color: #bef264;">Pantau kebun rumah</p>
             <h1 class="mt-3 font-display text-4xl font-extrabold sm:text-5xl">Cari kebunku</h1>
-            <p class="mt-4 max-w-2xl leading-7 text-emerald-100">Pilih nama penanam, lalu masukkan kode akses privat untuk melihat tanaman dan jadwal perawatannya.</p>
+            <p class="mt-4 max-w-2xl leading-7 text-[#d1fae5]" style="color: #d1fae5;">Pilih nama penanam untuk melihat daftar tanaman dan jadwal perawatannya.</p>
         </div>
     </section>
     <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
         <form method="GET" action="{{ route('penanam.index') }}" class="mb-7 flex max-w-xl gap-3">
             <label class="sr-only" for="q">Cari nama penanam</label>
             <input id="q" name="q" value="{{ request('q') }}" placeholder="Cari nama penanam..." class="min-w-0 flex-1 rounded-2xl border border-stone-300 bg-white px-5 py-3 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-            <button class="rounded-2xl bg-emerald-800 px-5 py-3 font-bold text-white hover:bg-emerald-950">Cari</button>
+            <button class="rounded-2xl bg-[#17483B] px-5 py-3 font-bold text-white hover:bg-[#10372D]">Cari</button>
         </form>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @forelse ($penanams as $penanam)

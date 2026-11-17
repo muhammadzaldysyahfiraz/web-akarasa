@@ -38,9 +38,12 @@ class LaporanController extends Controller
             ? 'laporan-kebun-' . Str::slug($penanam->nama) . '.pdf'
             : 'laporan-kebun-toga.pdf';
 
-        return response($document->output(), 200, [
+        $pdfOutput = $document->output();
+
+        return response()->streamDownload(function () use ($pdfOutput): void {
+            echo $pdfOutput;
+        }, $filename, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 }

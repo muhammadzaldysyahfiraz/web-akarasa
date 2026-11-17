@@ -94,7 +94,7 @@
                     @if (! $penanam)
                         <td>{{ $activity->tanamanDitanam?->penanam?->nama ?? 'Penanam' }}</td>
                     @endif
-                    <td>{{ $activity->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Perawatan' }}</td>
+                    <td>{{ $activity->catatan ?: ($activity->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Perawatan') }}</td>
                 </tr>
             @empty
                 <tr><td colspan="{{ $penanam ? 3 : 4 }}">Belum ada aktivitas perawatan.</td></tr>

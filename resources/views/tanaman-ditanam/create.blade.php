@@ -8,7 +8,7 @@
         <p class="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Catat kebunmu</p>
         <h1 class="mt-2 font-display text-2xl font-bold text-[#193b32] sm:text-[27px]">Tambah Tanaman Baru</h1>
         <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-            Gunakan kode akses yang sama untuk menambahkan tanaman ke kebun yang sudah ada. Kode ini dipakai untuk melindungi data kebunmu.
+            Gunakan nama penanam yang sama untuk menambahkan tanaman ke kebun yang sudah ada.
         </p>
 
         @if ($errors->any())
@@ -25,20 +25,11 @@
         <form method="POST" action="{{ route('tanaman-ditanam.store') }}" class="mt-6 space-y-5">
             @csrf
 
-            <div class="grid gap-5 sm:grid-cols-2">
-                <label class="block text-sm font-bold text-stone-700">
-                    Nama penanam
-                    <input name="penanam_nama" value="{{ old('penanam_nama') }}" required maxlength="255"
-                        class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                </label>
-
-                <label class="block text-sm font-bold text-stone-700">
-                    Kode akses kebun
-                    <input name="access_code" type="password" required minlength="8" autocomplete="new-password"
-                        class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                    <span class="mt-1 block text-xs font-normal text-stone-500">Minimal 8 karakter. Simpan kode ini untuk akses berikutnya.</span>
-                </label>
-            </div>
+            <label class="block text-sm font-bold text-stone-700">
+                Nama penanam
+                <input name="penanam_nama" value="{{ old('penanam_nama') }}" required maxlength="255"
+                    class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+            </label>
 
             <label class="block text-sm font-bold text-stone-700">
                 Tanaman

@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -31,7 +32,6 @@ class TanamanDitanamController extends Controller
     ): RedirectResponse {
         $data = $request->validate([
             'penanam_nama' => ['required', 'string', 'max:255'],
-            'access_code' => ['required', 'string', 'min:8', 'max:128'],
 
             'tanaman_id' => [
                 'required',
@@ -71,7 +71,6 @@ class TanamanDitanamController extends Controller
 
         $penanam = DB::transaction(function () use (
             $data,
-            $request,
             $schedules,
             $sudahDisiram
         ): Penanam {
@@ -80,19 +79,10 @@ class TanamanDitanamController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($penanam) {
-                abort_unless(
-                    Hash::check(
-                        $data['access_code'],
-                        $penanam->access_code_hash
-                    ),
-                    403,
-                    'Kode akses kebun tidak sesuai.'
-                );
-            } else {
+            if (! $penanam) {
                 $penanam = Penanam::create([
                     'nama' => $data['penanam_nama'],
-                    'access_code_hash' => Hash::make($data['access_code']),
+                    'access_code_hash' => Hash::make(Str::random(32)),
                 ]);
             }
 
@@ -112,12 +102,6 @@ class TanamanDitanamController extends Controller
             ]);
 
             $schedules->generateRollingHorizon($planting);
-
-            $request->session()->regenerate();
-            $request->session()->put(
-                'garden_access.'.$penanam->id,
-                true
-            );
 
             return $penanam;
         });

@@ -41,6 +41,8 @@
                         ->whereIn('status', ['pending', 'missed'])
                         ->sortBy('perawatan_at')
                         ->take(4);
+                    $recentActivities = $planting->aktivitasPerawatan
+                        ->sortByDesc('performed_at');
                     $harvest = $planting->panen->sortByDesc('dipanen_at')->first();
                     $harvestCanBeCancelled = $harvest
                         && $harvest->dipanen_at->isSameWeek(today(), \Carbon\CarbonImmutable::MONDAY);
@@ -104,61 +106,91 @@
                     </div>
 
                     @if ($planting->status === 'bertumbuh')
-                        <div class="p-5 sm:p-7">
-                            <h3 class="text-xl font-bold text-emerald-950">Perawatan: penyiraman</h3>
-                            <p class="mt-1 text-base text-stone-600">Pilih tombol setelah kegiatan benar-benar dilakukan.</p>
+                        <div class="space-y-6 p-5 sm:p-7">
+                            {{-- Catat Perawatan Hari Ini (Simpel) --}}
+                            <div class="rounded-2xl border border-[#dce5d8] bg-[#f8faf6] p-4 sm:p-5">
+                                <h3 class="text-lg font-bold text-emerald-950">Catat perawatan hari ini</h3>
+                                <p class="mt-1 text-sm text-stone-600">Pilih perawatan yang baru saja dilakukan pada tanaman ini.</p>
 
-                            @if ($openWatering->isEmpty())
-                                <p class="mt-4 rounded-xl bg-stone-50 p-4 text-base text-stone-600">Belum ada penyiraman yang perlu dicatat.</p>
-                            @else
-                                <ul class="mt-3 divide-y divide-stone-200">
-                                    @foreach ($openWatering as $schedule)
-                                        <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                                            <div>
-                                                <p class="text-base font-bold text-stone-800">{{ $schedule->aturanPerawatan->nama }}</p>
-                                                <p class="mt-1 text-base text-stone-600">{{ $schedule->aturanPerawatan->instruksi ?: 'Siram tanaman secukupnya.' }}</p>
-                                                <p class="mt-1 text-sm font-semibold text-emerald-800">{{ $schedule->perawatan_at->translatedFormat('l, j F Y') }}</p>
-                                            </div>
-                                            <form method="POST" action="{{ route('kebun.complete', [$penanam, $schedule]) }}"
-                                                onsubmit="return confirm('Yakin tanaman ini sudah disiram?')">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button class="min-h-14 w-full rounded-xl border-2 border-emerald-800 px-5 py-3 text-base font-bold text-emerald-900 hover:bg-emerald-800 hover:text-white sm:w-auto">
-                                                    Sudah disiram
-                                                </button>
-                                            </form>
-                                        </li>
+                                <div class="mt-4 flex flex-wrap gap-2.5">
+                                    @foreach (['Disiram', 'Diberi pupuk', 'Dipangkas / bersihkan gulma', 'Cek hama & daun'] as $aksi)
+                                        <form method="POST" action="{{ route('kebun.quick-log', [$penanam, $planting]) }}">
+                                            @csrf
+                                            <input type="hidden" name="aktivitas" value="{{ $aksi }}">
+                                            <button type="submit"
+                                                class="min-h-12 rounded-xl border-2 border-[#174638] bg-white px-4 py-2.5 text-sm font-bold text-[#174638] transition hover:bg-[#174638] hover:text-white">
+                                                + {{ $aksi }}
+                                            </button>
+                                        </form>
                                     @endforeach
-                                </ul>
+                                </div>
+
+                                <form method="POST" action="{{ route('kebun.quick-log', [$penanam, $planting]) }}" class="mt-3 flex flex-col gap-2.5 sm:flex-row">
+                                    @csrf
+                                    <input type="text" name="aktivitas" required maxlength="255"
+                                        placeholder="Atau tulis perawatan lain, misal: Ganti media tanam..."
+                                        class="min-h-12 flex-1 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                                    <button type="submit"
+                                        class="min-h-12 rounded-xl bg-[#174638] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#285e50]">
+                                        Simpan
+                                    </button>
+                                </form>
+                            </div>
+
+                            {{-- Jadwal Penyiraman Terjadwal --}}
+                            @if ($openWatering->isNotEmpty())
+                                <div>
+                                    <h3 class="text-lg font-bold text-emerald-950">Pengingat jadwal perawatan</h3>
+                                    <ul class="mt-3 divide-y divide-stone-200">
+                                        @foreach ($openWatering as $schedule)
+                                            <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                                <div>
+                                                    <p class="text-base font-bold text-stone-800">{{ $schedule->aturanPerawatan->nama }}</p>
+                                                    <p class="mt-1 text-base text-stone-600">{{ $schedule->aturanPerawatan->instruksi ?: 'Siram tanaman secukupnya.' }}</p>
+                                                    <p class="mt-1 text-sm font-semibold text-emerald-800">{{ $schedule->perawatan_at->translatedFormat('l, j F Y') }}</p>
+                                                </div>
+                                                <form method="POST" action="{{ route('kebun.complete', [$penanam, $schedule]) }}"
+                                                    onsubmit="return confirm('Yakin tanaman ini sudah disiram?')">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button class="min-h-14 w-full rounded-xl border-2 border-emerald-800 px-5 py-3 text-base font-bold text-emerald-900 hover:bg-emerald-800 hover:text-white sm:w-auto">
+                                                        Sudah disiram
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
                             @endif
 
-                            <details class="mt-4">
-                                <summary class="cursor-pointer py-2 text-base font-bold text-emerald-800">Lihat riwayat penyiraman</summary>
+                            {{-- Riwayat Aktivitas Perawatan --}}
+                            <details open>
+                                <summary class="cursor-pointer py-1 text-base font-bold text-emerald-800">Riwayat perawatan tanaman ({{ $recentActivities->count() }})</summary>
                                 <ul class="mt-2 divide-y divide-stone-200">
-                                    @forelse ($wateringSchedules->where('status', 'completed')->sortByDesc('perawatan_at') as $schedule)
+                                    @forelse ($recentActivities as $activity)
                                         @php
-                                            $activity = $schedule->aktivitasPerawatan;
-                                            $activityCanBeCancelled = $activity
-                                                && $activity->performed_at->isSameWeek(today(), \Carbon\CarbonImmutable::MONDAY);
+                                            $activityCanBeCancelled = $activity->performed_at->isSameWeek(today(), \Carbon\CarbonImmutable::MONDAY);
                                         @endphp
                                         <li class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <p class="text-base font-semibold text-stone-800">{{ $schedule->perawatan_at->translatedFormat('j F Y') }} · Sudah disiram</p>
-                                                @if ($activity?->nama_pelaksana)
+                                                <p class="text-base font-semibold text-stone-800">
+                                                    {{ $activity->performed_at->translatedFormat('j F Y') }} · {{ $activity->catatan ?: ($activity->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Perawatan') }}
+                                                </p>
+                                                @if ($activity->nama_pelaksana)
                                                     <p class="text-sm text-stone-600">Dicatat oleh {{ $activity->nama_pelaksana }}</p>
                                                 @endif
                                             </div>
                                             @if ($activityCanBeCancelled)
                                                 <form method="POST" action="{{ route('kebun.activity.cancel', [$penanam, $activity]) }}"
-                                                    onsubmit="return confirm('Yakin membatalkan tanda sudah disiram?')">
+                                                    onsubmit="return confirm('Yakin membatalkan catatan perawatan ini?')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button class="min-h-12 rounded-xl border-2 border-stone-400 px-4 py-2 text-base font-semibold text-stone-700">Batalkan</button>
+                                                    <button class="min-h-11 rounded-xl border border-stone-300 px-3.5 py-1.5 text-sm font-semibold text-stone-700 hover:bg-stone-100">Batalkan</button>
                                                 </form>
                                             @endif
                                         </li>
                                     @empty
-                                        <li class="py-3 text-base text-stone-600">Belum ada aktivitas penyiraman.</li>
+                                        <li class="py-3 text-base text-stone-600">Belum ada aktivitas perawatan. Klik salah satu tombol di atas untuk mencatat.</li>
                                     @endforelse
                                 </ul>
                             </details>

@@ -141,7 +141,7 @@
                     Katalog Tanaman
                 </a>
 
-                <a href="{{ route('penanam.index') }}"
+                                <a href="{{ route('penanam.index') }}"
                    class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition
                    {{ request()->routeIs('penanam.*', 'kebun.*', 'tanaman-ditanam.*') ? 'bg-[#315e50] font-semibold text-white' : 'text-emerald-100 hover:bg-[#285447]' }}">
                     <span>⌂</span>

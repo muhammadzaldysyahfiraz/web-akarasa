@@ -55,4 +55,25 @@ class TanamanDitanam extends Model
     {
         return $this->hasMany(Panen::class);
     }
+
+    public function estimasiPanen(): ?array
+    {
+        if (! $this->ditanam_at || ! $this->tanaman) {
+            return null;
+        }
+
+        $minHari = $this->tanaman->min_hari_panen;
+        $maxHari = $this->tanaman->max_hari_panen ?? $minHari;
+
+        if ($minHari === null && $maxHari === null) {
+            return null;
+        }
+
+        $minHari = $minHari ?? $maxHari;
+
+        return [
+            'mulai' => $this->ditanam_at->copy()->addDays((int) $minHari),
+            'sampai' => $this->ditanam_at->copy()->addDays((int) $maxHari),
+        ];
+    }
 }

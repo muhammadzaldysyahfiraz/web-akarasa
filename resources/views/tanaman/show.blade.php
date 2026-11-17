@@ -39,11 +39,7 @@
             </div>
 
             @if ($isAdmin)
-                <a href="{{ route('admin.resources.edit', ['resource' => 'tanaman', 'id' => $tanaman->id]) }}"
-                   class="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#174638] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#285e50]">
-                    <span>✎</span>
-                    <span>Edit Tanaman</span>
-                </a>
+                
             @endif
         </div>
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ResourceController;
+use App\Http\Controllers\JadwalPerawatanController;
 use App\Http\Controllers\KebunController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PenanamController;
@@ -55,8 +56,11 @@ Route::get('/tanaman', [TanamanController::class, 'index'])
 Route::get('/tanaman/{tanaman}', [TanamanController::class, 'show'])
     ->name('tanaman.show');
 
-Route::get('/jadwal-perawatan', [ResourceController::class, 'schedule'])
+Route::get('/jadwal-perawatan', [JadwalPerawatanController::class, 'index'])
     ->name('jadwal-perawatan.index');
+
+Route::post('/jadwal-perawatan/toggle', [JadwalPerawatanController::class, 'toggle'])
+    ->name('jadwal-perawatan.toggle');
 
 Route::get('/laporan', LaporanController::class)
     ->name('laporan.index');
@@ -89,6 +93,10 @@ Route::patch(
     '/kebun/{penanam}/jadwal/{jadwal}/complete',
     [KebunController::class, 'complete']
 )->name('kebun.complete');
+
+Route::post('/kebun/{penanam}/tanaman/{tanamanDitanam}/aktivitas', [KebunController::class, 'quickLog'])->name('kebun.quick-log');
+
+Route::delete('/kebun/{penanam}/aktivitas/{aktivitas}', [KebunController::class, 'cancelActivity'])->name('kebun.activity.cancel');
 
 Route::post('/jadwal-perawatan/{jadwal}/aktivitas', [KebunController::class, 'recordActivity'])
     ->middleware('throttle:10,1')
@@ -183,3 +191,10 @@ Route::get('/hapus-jahe', function () {
         'jumlah_dihapus' => $jumlah,
     ]);
 });
+
+Route::post('/admin/logout', function (\Illuminate\Http\Request $request) {
+    \Illuminate\Support\Facades\Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect()->route('user.dashboard');
+})->name('admin.logout');

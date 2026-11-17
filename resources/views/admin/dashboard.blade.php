@@ -405,7 +405,7 @@
                             <span class="dash-stat-icon" style="width:36px;height:36px;font-size:16px;">🌿</span>
                             <div>
                                 <p style="margin:0;font-size:14px;font-weight:700;color:#1e293b;">
-                                    {{ $activity->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Perawatan' }} ·
+                                    {{ $activity->catatan ?: ($activity->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Perawatan') }} ·
                                     <span style="color:#174638;">{{ $activity->tanamanDitanam?->tanaman?->nama ?? 'Tanaman' }}</span>
                                 </p>
                                 <p style="margin:2px 0 0;font-size:12px;color:#64748b;">
@@ -425,35 +425,36 @@
             @endif
         </section>
 
-        {{-- KANAN: PENGELOLAAN ADMIN --}}
+        {{-- KANAN: AKSI CEPAT & PENGELOLAAN --}}
         <div class="dash-side-stack">
-            @if (auth()->user()?->role === 'admin')
-                <section class="dash-panel">
-                    <div class="dash-panel-header" style="margin-bottom:14px;padding-bottom:10px;">
-                        <div>
-                            <h2 style="font-size:16px;">Pengelolaan Admin</h2>
-                            <p style="font-size:12px;">Akses cepat manajemen TOGA</p>
-                        </div>
+            <section class="dash-panel">
+                <div class="dash-panel-header" style="margin-bottom:14px;padding-bottom:10px;">
+                    <div>
+                        <h2 style="font-size:16px;">{{ auth()->user()?->role === 'admin' ? 'Pengelolaan Admin' : 'Aksi Cepat Kebun' }}</h2>
+                        <p style="font-size:12px;">Akses cepat aktivitas & jadwal TOGA</p>
                     </div>
+                </div>
 
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <a href="{{ route('admin.resources.create', 'tanaman') }}" class="dash-action-btn dash-action-primary">
-                            <span>➕ Tambah Tanaman Baru</span>
-                            <span>→</span>
-                        </a>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <a href="{{ auth()->user()?->role === 'admin' ? route('admin.resources.create', 'tanaman') : route('tanaman-ditanam.create') }}"
+                       class="dash-action-btn dash-action-primary">
+                        <span>➕ Tambah Tanaman Baru</span>
+                        <span>→</span>
+                    </a>
 
+                    @if (auth()->user()?->role === 'admin')
                         <a href="{{ route('admin.resources.index', 'tanaman') }}" class="dash-action-btn dash-action-secondary">
                             <span>🌿 Kelola Katalog Tanaman</span>
                             <span>→</span>
                         </a>
+                    @endif
 
-                        <a href="{{ route('admin.resources.index', 'aturan-perawatan') }}" class="dash-action-btn dash-action-secondary">
-                            <span>🗓️ Kelola Aturan Perawatan</span>
-                            <span>→</span>
-                        </a>
-                    </div>
-                </section>
-            @endif
+                    <a href="{{ route('jadwal-perawatan.index') }}" class="dash-action-btn dash-action-secondary">
+                        <span>🗓️ Jadwal Perawatan</span>
+                        <span>→</span>
+                    </a>
+                </div>
+            </section>
 
             <aside class="dash-tip-box">
                 <p style="margin:0;font-size:13px;font-weight:700;color:#174638;">💡 Info Koordinator KKN</p>
