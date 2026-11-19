@@ -119,6 +119,7 @@ Route::post('/jadwal-perawatan/{jadwal}/aktivitas', [KebunController::class, 're
 // FITUR ADMIN
 Route::prefix('admin')
     ->name('admin.')
+    ->middleware(['auth', 'admin'])
     ->group(function () {
         Route::get('/', DashboardController::class)
             ->name('dashboard');

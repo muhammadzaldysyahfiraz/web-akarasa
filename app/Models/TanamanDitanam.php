@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TanamanDitanam extends Model
 {
     protected $table = 'tanaman_ditanam';
+
+    private const PHASE_NOTE_PREFIX = '[fase:';
 
     protected $fillable = [
         'penanam_id',
@@ -18,16 +21,12 @@ class TanamanDitanam extends Model
         'location',
         'catatan',
         'status',
-        'sudah_disiram',
-        'terakhir_disiram_at',
     ];
 
     protected function casts(): array
     {
         return [
             'ditanam_at' => 'date',
-            'terakhir_disiram_at' => 'date',
-            'sudah_disiram' => 'boolean',
         ];
     }
 

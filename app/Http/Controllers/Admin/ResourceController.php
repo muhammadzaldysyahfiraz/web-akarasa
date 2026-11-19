@@ -9,8 +9,10 @@ use App\Models\Tanaman;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ResourceController extends Controller
@@ -47,9 +49,8 @@ class ResourceController extends Controller
         $data = $request->validate($this->rules($resource));
 
         if ($resource === 'penamans') {
-            $code = $data['access_code'];
-            unset($data['access_code']);
-            $data['access_code_hash'] = Hash::make($code);
+            $this->ensureGrowerNameIsUnique($data['nama']);
+            $data['access_code_hash'] = Hash::make(Str::random(64));
             $data['created_by'] = $request->user()->id;
         }
 
@@ -59,9 +60,7 @@ class ResourceController extends Controller
             ->route('admin.resources.index', $resource)
             ->with('status', 'Data berhasil ditambahkan.');
 
-        return $resource === 'penamans'
-            ? $redirect->with('new_access_code', $code)
-            : $redirect;
+        return $redirect;
     }
 
     public function edit(string $resource, string $id): View
@@ -84,12 +83,7 @@ class ResourceController extends Controller
         $data = $request->validate($this->rules($resource, $item));
 
         if ($resource === 'penamans') {
-            $code = $data['access_code'] ?? null;
-            unset($data['access_code']);
-
-            if ($code) {
-                $data['access_code_hash'] = Hash::make($code);
-            }
+            $this->ensureGrowerNameIsUnique($data['nama'], (int) $item->getKey());
         }
 
         $item->update($data);
@@ -106,7 +100,7 @@ class ResourceController extends Controller
 
         if ($item instanceof Penanam && $item->tanamanDitanam()->exists()) {
             return back()->withErrors([
-                'delete' => 'Penanam masih memiliki tanaman di kebunnya. Hapus tanaman tersebut terlebih dahulu.'
+                'delete' => 'Penanam masih memiliki tanaman di kebunnya. Hapus tanaman tersebut terlebih dahulu.',
             ]);
         }
 
@@ -118,7 +112,7 @@ class ResourceController extends Controller
 
         if ($item instanceof AturanPerawatan && $item->jadwalPerawatan()->exists()) {
             return back()->withErrors([
-                'delete' => 'Aturan masih digunakan oleh jadwal perawatan.'
+                'delete' => 'Aturan masih digunakan oleh jadwal perawatan.',
             ]);
         }
 
@@ -132,6 +126,20 @@ class ResourceController extends Controller
         abort_unless(isset(self::RESOURCES[$resource]), 404);
 
         return self::RESOURCES[$resource];
+    }
+
+    private function ensureGrowerNameIsUnique(string $name, ?int $ignoreId = null): void
+    {
+        $duplicate = Penanam::query()
+            ->whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower(trim($name))])
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists();
+
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'nama' => 'Nama penanam tersebut sudah terdaftar.',
+            ]);
+        }
     }
 
     private function rules(string $resource, ?Model $item = null): array
@@ -164,14 +172,11 @@ class ResourceController extends Controller
             ],
 
             'penamans' => [
-                'nama' => ['required', 'string', 'max:255'],
-                'phone' => ['nullable', 'string', 'max:255'],
-                'catatan' => ['nullable', 'string'],
-                'access_code' => [
-                    $item ? 'nullable' : 'required',
+                'nama' => [
+                    'required',
                     'string',
-                    'min:8',
-                    'max:128',
+                    'max:255',
+                    Rule::unique('penanam', 'nama')->ignore($item?->getKey()),
                 ],
             ],
 

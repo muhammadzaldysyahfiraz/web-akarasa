@@ -9,11 +9,13 @@ class TanamanDitanamResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $dates = $this->estimasiPanen();
         $estimate = null;
-        if ($this->ditanam_at && $this->tanaman?->min_hari_panen !== null && $this->tanaman?->max_hari_panen !== null) {
+
+        if ($dates) {
             $estimate = [
-                'mulai' => $this->ditanam_at->copy()->addDays($this->tanaman->min_hari_panen)->toDateString(),
-                'sampai' => $this->ditanam_at->copy()->addDays($this->tanaman->max_hari_panen)->toDateString(),
+                'mulai' => $dates['mulai']->toDateString(),
+                'sampai' => $dates['sampai']->toDateString(),
             ];
         }
 

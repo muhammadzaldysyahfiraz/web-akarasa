@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\JadwalPerawatan;
 use App\Models\TanamanDitanam;
+use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,6 @@ class PerawatanScheduleService
         if ($planting->status !== 'bertumbuh') {
             return $planting->jadwalPerawatan()
                 ->where('status', 'pending')
-                ->whereDate('perawatan_at', '>=', today())
                 ->delete();
         }
 
@@ -58,9 +58,11 @@ class PerawatanScheduleService
 
     public function markMissed(): int
     {
+        $weekStart = CarbonImmutable::today()->startOfWeek(CarbonImmutable::MONDAY)->toDateString();
+
         return JadwalPerawatan::query()
             ->where('status', 'pending')
-            ->whereDate('perawatan_at', '<', today())
+            ->whereDate('perawatan_at', '<', $weekStart)
             ->update(['status' => 'missed', 'updated_at' => now()]);
     }
 }

@@ -29,11 +29,9 @@ jadwal perawatan, dan estimasi panen.
    php artisan migrate:fresh --seed
    ```
 
-   Seeder membuat akun admin `admin@kebuntoga.local`. Bila `ADMIN_PASSWORD`
-   tidak diisi, password acak sementara dan kode akses kebun contoh dicetak ke
-   output seeder. Simpan secara aman; kode kebun disimpan di database sebagai
-   hash. Untuk pengembangan, akun admin dapat diatur melalui `ADMIN_EMAIL` dan
-   `ADMIN_PASSWORD` pada `.env`.
+   Seeder pengembangan membuat akun admin `admin@akarasa.com` dengan password
+   `admin123`. Ganti password tersebut sebelum aplikasi dipakai di lingkungan
+   bersama atau produksi.
 
 5. Pasang dan build asset:
 
@@ -48,19 +46,36 @@ jadwal perawatan, dan estimasi panen.
    php artisan serve
    ```
 
+   Pada terminal lain, jalankan scheduler agar tanaman yang sudah dipanen
+   lebih dari dua bulan dihapus otomatis:
+
+   ```powershell
+   php artisan schedule:work
+   ```
+
 ## Fitur MVP
 
-- Katalog tanaman aktif dengan pencarian dan filter kategori.
-- Detail tanaman, panduan, kebutuhan cahaya/air, dan rentang perkiraan panen.
-- Pencatatan tanaman oleh penanam tanpa akun; kode akses melindungi kebun.
-- Dashboard kebun, jadwal tanggal, riwayat perawatan, dan aksi tandai selesai.
+- Dashboard publik berisi rekap dan laporan perawatan, dengan unduhan PDF.
+- Katalog tanaman aktif dengan pencarian, filter kategori, panduan, dan info umum.
+- Kebunku: pilih identitas berdasarkan nama saja, tanpa akun atau PIN.
+- Nama penanam baru ditambahkan saat mendaftarkan tanaman; nama kembar ditolak.
+- Pengunjung dapat melihat kebun dan mencatat penyiraman atau panen.
+- Tanaman didaftarkan dengan fase bibit, anakan, atau dewasa; estimasi panen
+  mengikuti fase tersebut.
+- Aktivitas dapat dibatalkan hanya pada minggu yang sama dengan pencatatannya.
+- Setelah panen, pengingat berhenti dan tanaman dihapus setelah dua bulan.
 - Jadwal dihasilkan dari aturan tiap tanaman dan dibuat tanpa duplikasi.
-- Jadwal dibuat pada jendela 90 hari ke depan, atau sampai estimasi panen maksimum bila lebih panjang.
-- Area admin terlindungi autentikasi dengan CRUD tanaman, penanam, dan aturan.
+- Area admin terlindungi autentikasi untuk mengelola katalog dan aturan perawatan.
 - API Resource di prefix `/api/v1`.
 
 Estimasi panen adalah rentang perkiraan, bukan kepastian. Produk tidak memberikan
-diagnosis penyakit atau rekomendasi medis.
+diagnosis penyakit atau rekomendasi medis. Skema database dan bentuk API tetap
+mengikuti kontrak proyek; kode akses tetap digunakan oleh endpoint API, bukan
+oleh alur website untuk penanam.
+
+Sampai tersedia angka khusus per tanaman dan fase, rentang katalog dianggap
+sebagai satu siklus penuh: bibit memakai seluruh rentang, anakan memakai sisa
+dua pertiga, dan dewasa memakai sisa sepertiga.
 
 ## API
 

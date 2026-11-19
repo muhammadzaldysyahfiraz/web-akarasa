@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tanaman;
-use App\Models\TanamanDitanam;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class TanamanController extends Controller
@@ -68,7 +66,6 @@ class TanamanController extends Controller
             'tanaman' => $tanaman->load([
                 'aturanPerawatan' => fn ($query) => $query->where('is_active', true),
             ]),
-            'plantings' => $plantings,
         ]);
     }
 }

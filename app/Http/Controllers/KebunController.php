@@ -4,17 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\AktivitasPerawatan;
 use App\Models\JadwalPerawatan;
+use App\Models\Panen;
 use App\Models\Penanam;
 use App\Models\TanamanDitanam;
 use App\Services\PerawatanScheduleService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class KebunController extends Controller
 {
-    public function show(Request $request, Penanam $penanam, PerawatanScheduleService $schedules): View
+    public function show(Penanam $penanam, PerawatanScheduleService $schedules): View
     {
         $filters = $request->validate(['tanggal' => ['nullable', 'date_format:Y-m-d']]);
         $schedules->markMissed();
@@ -32,11 +33,10 @@ class KebunController extends Controller
         return view('kebun.show', [
             'penanam' => $penanam,
             'plantings' => $plantings,
-            'selectedDate' => $filters['tanggal'] ?? null,
         ]);
     }
 
-    public function access(Request $request, Penanam $penanam): RedirectResponse
+    public function complete(Penanam $penanam, JadwalPerawatan $jadwal): RedirectResponse
     {
         return redirect()->route('kebun.show', $penanam);
     }
@@ -93,6 +93,7 @@ class KebunController extends Controller
             $lockedSchedule = JadwalPerawatan::query()
                 ->whereKey($jadwal->id)
                 ->whereHas('tanamanDitanam', fn ($query) => $query->where('penanam_id', $penanam->id))
+                ->whereHas('aturanPerawatan', fn ($query) => $query->where('type', 'penyiraman'))
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -100,7 +101,7 @@ class KebunController extends Controller
                 return;
             }
 
-            abort_unless($lockedSchedule->status === 'pending', 409, 'Jadwal yang terlewat tidak dapat ditandai selesai.');
+            abort_unless(in_array($lockedSchedule->status, ['pending', 'missed'], true), 409, 'Aktivitas ini tidak dapat ditandai selesai.');
 
             $lockedSchedule->update(['status' => 'completed']);
             $lockedSchedule->aktivitasPerawatan()->firstOrCreate(
@@ -117,31 +118,91 @@ class KebunController extends Controller
         return redirect()->route('kebun.show', $penanam)->with('status', 'Perawatan berhasil dicatat.');
     }
 
-    public function recordActivity(Request $request, JadwalPerawatan $jadwal): RedirectResponse
+    public function cancelActivity(Penanam $penanam, AktivitasPerawatan $aktivitas): RedirectResponse
     {
-        DB::transaction(function () use ($jadwal): void {
-            $lockedSchedule = JadwalPerawatan::query()
-                ->whereKey($jadwal->id)
+        DB::transaction(function () use ($penanam, $aktivitas): void {
+            $lockedActivity = AktivitasPerawatan::query()
+                ->whereKey($aktivitas->id)
+                ->whereNotNull('jadwal_perawatan_id')
+                ->whereHas('tanamanDitanam', fn ($query) => $query->where('penanam_id', $penanam->id))
+                ->whereHas('jadwalPerawatan.aturanPerawatan', fn ($query) => $query->where('type', 'penyiraman'))
+                ->lockForUpdate()
+                ->firstOrFail();
+            $performedAt = CarbonImmutable::parse($lockedActivity->performed_at);
+            $weekStart = CarbonImmutable::today()->startOfWeek(CarbonImmutable::MONDAY);
+
+            abort_unless(
+                $performedAt->betweenIncluded($weekStart, $weekStart->endOfWeek(CarbonImmutable::SUNDAY)),
+                409,
+                'Aktivitas hanya dapat dibatalkan pada minggu yang sama.',
+            );
+
+            if ($lockedActivity->jadwal_perawatan_id) {
+                JadwalPerawatan::query()
+                    ->whereKey($lockedActivity->jadwal_perawatan_id)
+                    ->update(['status' => 'pending']);
+            }
+
+            $lockedActivity->delete();
+        });
+
+        return redirect()->route('kebun.show', $penanam)->with('status', 'Aktivitas berhasil dibatalkan.');
+    }
+
+    public function harvest(
+        Penanam $penanam,
+        TanamanDitanam $planting,
+        PerawatanScheduleService $schedules
+    ): RedirectResponse {
+        DB::transaction(function () use ($penanam, $planting, $schedules): void {
+            $lockedPlanting = TanamanDitanam::query()
+                ->whereKey($planting->id)
+                ->where('penanam_id', $penanam->id)
+                ->with('tanaman')
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            abort_unless($lockedSchedule->status === 'pending', 409, 'Jadwal ini sudah ditandai selesai atau terlewat.');
-
-            $lockedSchedule->update(['status' => 'completed']);
-            $lockedSchedule->aktivitasPerawatan()->firstOrCreate(
-                [],
-                [
-                    'tanaman_ditanam_id' => $lockedSchedule->tanaman_ditanam_id,
-                    'performed_at' => now(),
-                ],
+            abort_unless($lockedPlanting->status === 'bertumbuh', 409, 'Tanaman ini sudah tidak dalam masa pertumbuhan.');
+            $estimate = $lockedPlanting->estimasiPanen();
+            abort_unless(
+                $estimate && $estimate['mulai']->lte(CarbonImmutable::today()),
+                409,
+                'Tanaman belum memasuki perkiraan masa panen.',
             );
+
+            Panen::create([
+                'tanaman_ditanam_id' => $lockedPlanting->id,
+                'dipanen_at' => today(),
+            ]);
+            $lockedPlanting->update(['status' => 'dipanen']);
+            $schedules->generateRollingHorizon($lockedPlanting);
         });
 
-        return redirect()
-            ->route('jadwal-perawatan.index', [
-                'month' => $jadwal->perawatan_at->format('Y-m'),
-                'tanggal' => $jadwal->perawatan_at->toDateString(),
-            ])
-            ->with('status', 'Aktivitas perawatan berhasil dicatat.');
+        return redirect()->route('kebun.show', $penanam)->with('status', 'Panen berhasil dicatat.');
+    }
+
+    public function cancelHarvest(Penanam $penanam, TanamanDitanam $planting): RedirectResponse
+    {
+        DB::transaction(function () use ($penanam, $planting): void {
+            $lockedPlanting = TanamanDitanam::query()
+                ->whereKey($planting->id)
+                ->where('penanam_id', $penanam->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $harvest = $lockedPlanting->panen()->latest('dipanen_at')->lockForUpdate()->firstOrFail();
+            $harvestDate = CarbonImmutable::parse($harvest->dipanen_at);
+            $weekStart = CarbonImmutable::today()->startOfWeek(CarbonImmutable::MONDAY);
+
+            abort_unless(
+                $harvestDate->betweenIncluded($weekStart, $weekStart->endOfWeek(CarbonImmutable::SUNDAY)),
+                409,
+                'Panen hanya dapat dibatalkan pada minggu yang sama.',
+            );
+
+            $harvest->delete();
+            $lockedPlanting->update(['status' => 'bertumbuh']);
+        });
+
+        return redirect()->route('kebun.show', $penanam)->with('status', 'Panen berhasil dibatalkan.');
     }
 }
