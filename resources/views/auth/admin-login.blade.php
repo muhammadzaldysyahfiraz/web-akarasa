@@ -35,7 +35,7 @@
                     id="email"
                     type="email"
                     name="email"
-                    value="{{ old('email', 'admin@akarasa.test') }}"
+                    value="{{ old('email', 'admin@akarasa.com') }}"
                     required
                     autofocus
                     class="mt-1.5 w-full rounded-lg border border-gray-200 bg-[#f3f5f0] px-3.5 py-2.5 text-xs outline-none focus:border-[#174238] focus:bg-white focus:ring-2 focus:ring-[#b9dc68]"

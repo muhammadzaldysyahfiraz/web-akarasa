@@ -10,12 +10,13 @@ use App\Models\TanamanDitanam;
 use App\Services\PerawatanScheduleService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class KebunController extends Controller
 {
-    public function show(Penanam $penanam, PerawatanScheduleService $schedules): View
+    public function show(Request $request, Penanam $penanam, PerawatanScheduleService $schedules): View
     {
         $filters = $request->validate(['tanggal' => ['nullable', 'date_format:Y-m-d']]);
         $schedules->markMissed();
@@ -34,11 +35,6 @@ class KebunController extends Controller
             'penanam' => $penanam,
             'plantings' => $plantings,
         ]);
-    }
-
-    public function complete(Penanam $penanam, JadwalPerawatan $jadwal): RedirectResponse
-    {
-        return redirect()->route('kebun.show', $penanam);
     }
 
     public function quickLog(Request $request, Penanam $penanam, TanamanDitanam $tanamanDitanam): RedirectResponse
@@ -66,25 +62,6 @@ class KebunController extends Controller
         return redirect()
             ->route('kebun.show', $penanam)
             ->with('status', 'Aktivitas "' . $data['aktivitas'] . '" berhasil dicatat.');
-    }
-
-    public function cancelActivity(Penanam $penanam, AktivitasPerawatan $aktivitas): RedirectResponse
-    {
-        abort_unless($aktivitas->tanamanDitanam?->penanam_id === $penanam->id, 404);
-
-        DB::transaction(function () use ($aktivitas): void {
-            if ($aktivitas->jadwal_perawatan_id) {
-                JadwalPerawatan::query()
-                    ->whereKey($aktivitas->jadwal_perawatan_id)
-                    ->update(['status' => 'pending']);
-            }
-
-            $aktivitas->delete();
-        });
-
-        return redirect()
-            ->route('kebun.show', $penanam)
-            ->with('status', 'Catatan perawatan berhasil dibatalkan.');
     }
 
     public function complete(Request $request, Penanam $penanam, JadwalPerawatan $jadwal): RedirectResponse

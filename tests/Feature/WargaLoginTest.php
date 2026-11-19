@@ -24,14 +24,14 @@ class WargaLoginTest extends TestCase
     {
         $admin = User::factory()->create([
             'nama' => 'Administrator',
-            'email' => 'admin@example.test',
-            'password' => 'password-admin',
+            'email' => 'admin@akarasa.com',
+            'password' => 'admin123',
             'role' => 'admin',
         ]);
 
-        $this->post(route('admin.login.store'), [
-            'email' => 'admin@example.test',
-            'password' => 'password-admin',
+        $this->post(route('login.post'), [
+            'email' => 'admin@akarasa.com',
+            'password' => 'admin123',
         ])->assertRedirect(route('admin.dashboard'));
 
         $this->assertAuthenticatedAs($admin);
@@ -57,7 +57,7 @@ class WargaLoginTest extends TestCase
     public function test_admin_pages_require_authentication_and_public_users_do_not_have_login_routes(): void
     {
         $this->get(route('admin.dashboard'))
-            ->assertRedirect(route('admin.login'));
+            ->assertRedirect(route('login'));
         $this->getJson('/api/v1/admin/tanaman')->assertUnauthorized();
         $this->get('/warga/login')->assertNotFound();
         $this->get('/register')->assertNotFound();
