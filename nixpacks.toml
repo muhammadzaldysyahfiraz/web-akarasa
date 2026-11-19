@@ -1,11 +1,15 @@
 [phases.setup]
-nixPkgs = ["php84", "php84Packages.composer", "nodejs_20"]
+nixPkgs = ["php84", "php84Packages.composer", "php84Extensions.pdo_pgsql", "nodejs_20"]
+
+[phases.install]
+cmds = [
+    "composer install --no-dev --optimize-autoloader --no-interaction",
+    "NODE_OPTIONS='--max-old-space-size=512' npm ci --no-audit --no-fund --prefer-offline"
+]
 
 [phases.build]
 cmds = [
-    "composer install --no-dev --optimize-autoloader",
-    "npm ci",
-    "npm run build"
+    "NODE_OPTIONS='--max-old-space-size=512' npm run build"
 ]
 
 [start]
