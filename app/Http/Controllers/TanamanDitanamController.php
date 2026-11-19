@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TanamanDitanamController extends Controller
@@ -60,16 +59,9 @@ class TanamanDitanamController extends Controller
             'catatan' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        if (! empty($data['penanam_id']) && ! empty($data['penanam_nama_baru'])) {
-            throw ValidationException::withMessages([
-                'penanam_nama_baru' => 'Pilih penanam yang sudah terdaftar atau masukkan nama baru, jangan keduanya.',
-            ]);
-        }
-
         $penanam = DB::transaction(function () use (
             $data,
-            $schedules,
-            $sudahDisiram
+            $schedules
         ): Penanam {
             $penanam = Penanam::query()
                 ->where('nama', $data['penanam_nama'])
@@ -89,7 +81,7 @@ class TanamanDitanamController extends Controller
                 'ditanam_at' => $data['ditanam_at'],
                 'quantity' => $data['quantity'] ?? 1,
                 'location' => $data['location'] ?? null,
-                'catatan' => TanamanDitanam::catatanDenganFase(
+                'catatan' => $this->catatanDenganFase(
                     $data['catatan'] ?? null,
                     $data['fase_pertumbuhan'],
                 ),
@@ -104,5 +96,14 @@ class TanamanDitanamController extends Controller
         return redirect()
             ->route('kebun.show', $penanam)
             ->with('status', 'Tanaman berhasil ditambahkan ke kebun.');
+    }
+
+    private function catatanDenganFase(?string $catatan, string $fase): string
+    {
+        $label = 'Fase: ' . ucfirst($fase);
+
+        return filled($catatan)
+            ? $label . "\n" . trim($catatan)
+            : $label;
     }
 }

@@ -27,16 +27,15 @@
 
             <label class="block text-sm font-bold text-stone-700">
                 Nama penanam
-                <input name="penanam_nama" value="{{ old('penanam_nama') }}" required maxlength="255"
+                <input name="penanam_nama" list="daftar-penanam" value="{{ old('penanam_nama') }}" required maxlength="255"
+                    autocomplete="off" placeholder="Pilih nama lama atau ketik nama baru, contoh: Ibu Siti"
                     class="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 font-normal outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                <datalist id="daftar-penanam">
+                    @foreach ($penanams as $p)
+                        <option value="{{ $p->nama }}"></option>
+                    @endforeach
+                </datalist>
             </label>
-
-            <div>
-                <label for="penanam_nama_baru" class="block text-base font-bold text-stone-800">Atau tulis nama penanam baru</label>
-                <input id="penanam_nama_baru" name="penanam_nama_baru" value="{{ old('penanam_nama_baru') }}"
-                    maxlength="255" autocomplete="name" placeholder="Contoh: Ibu Siti"
-                    class="mt-2 min-h-14 w-full rounded-xl border border-stone-300 px-4 py-3 text-base">
-            </div>
 
             <label class="block text-base font-bold text-stone-800">
                 Pilih tanaman
@@ -97,23 +96,4 @@
         </form>
     </div>
 </section>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const growerSelect = document.getElementById('penanam_id');
-        const newGrowerInput = document.getElementById('penanam_nama_baru');
-
-        growerSelect.addEventListener('change', function () {
-            if (growerSelect.value) {
-                newGrowerInput.value = '';
-            }
-        });
-
-        newGrowerInput.addEventListener('input', function () {
-            if (newGrowerInput.value.trim()) {
-                growerSelect.value = '';
-            }
-        });
-    });
-</script>
 @endsection
