@@ -2,142 +2,161 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AktivitasPerawatan;
-use App\Models\JadwalPerawatan;
+use App\Models\CatatanPanen;
 use App\Models\TanamanDitanam;
-use Carbon\CarbonImmutable;
-use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class JadwalPerawatanController extends Controller
 {
-    public const CARE_TYPES = [
-        'Disiram',
-        'Diberi pupuk',
-        'Dipangkas / bersihkan gulma',
-        'Cek hama & daun',
-    ];
-
-    public function index(Request $request): View
+    public function index(Request $request)
     {
-        $selectedDate = $request->filled('tanggal')
-            ? CarbonImmutable::parse($request->string('tanggal')->toString())
-            : CarbonImmutable::today();
+        // Tentukan bulan & tanggal yang dipilih
+        $monthParam =$request->query('month');
+        $tanggalParam =$request->query('tanggal');
 
-        $monthStart = $request->filled('month')
-            ? CarbonImmutable::parse($request->string('month')->toString() . '-01')->startOfMonth()
-            : $selectedDate->startOfMonth();
+        $selectedDate =$tanggalParam
+            ? Carbon::parse($tanggalParam)->startOfDay()
+            : now()->startOfDay();
 
-        $monthEnd = $monthStart->endOfMonth();
+        $monthStart =$monthParam
+            ? Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth()
+            : $selectedDate->copy()->startOfMonth();
 
-        $plantings = TanamanDitanam::query()
-            ->with(['tanaman', 'penanam'])
-            ->where('status', 'bertumbuh')
-            ->orderBy('penanam_id')
-            ->orderByDesc('ditanam_at')
+        // Susun hari-hari kalender (Senin s/d Minggu)
+        $gridStart = $monthStart->copy()->startOfWeek(Carbon::MONDAY);$gridEnd = $monthStart->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);$calendarDays = collect(CarbonPeriod::create($gridStart,$gridEnd));
+
+        // Daftar jenis perawatan harian
+        $careTypes = [
+            'Penyiraman',
+            'Pemupukan',
+            'Penyiangan Gulma',
+            'Cek Hama & Penyakit',
+        ];
+
+        // Ambil tanaman yang sedang ditanam
+        $plantings = TanamanDitanam::with(['tanaman', 'penanam'])
+            ->latest('ditanam_at')
             ->get();
 
-        // Aktivitas sepanjang bulan ini untuk penanda kalender
-        $monthActivities = AktivitasPerawatan::query()
-            ->whereBetween('performed_at', [$monthStart->startOfDay(), $monthEnd->endOfDay()])
-            ->get();
+        // Hitung jumlah aktivitas perawatan per tanggal di bulan aktif
+        $activityCountByDate = [];$checkedMap = [];
 
-        $activityCountByDate = $monthActivities
-            ->groupBy(fn ($item) => $item->performed_at->toDateString())
-            ->map->count();
+        if (DB::getSchemaBuilder()->hasTable('aktivitas_perawatans')) {
+            $activityCountByDate = DB::table('aktivitas_perawatans')
+                ->whereBetween('tanggal', [
+                    $monthStart->copy()->startOfMonth()->toDateString(),$monthStart->copy()->endOfMonth()->toDateString(),
+                ])
+                ->selectRaw('DATE(tanggal) as tgl, count(*) as total')
+                ->groupBy('tgl')
+                ->pluck('total', 'tgl')
+                ->toArray();
 
-        // Aktivitas khusus di tanggal yang sedang dipilih
-        $dayActivities = AktivitasPerawatan::query()
-            ->whereDate('performed_at', $selectedDate->toDateString())
-            ->get();
+            $checkedRows = DB::table('aktivitas_perawatans')
+                ->whereDate('tanggal', $selectedDate->toDateString())
+                ->get();
 
-        $checkedMap = [];
-        foreach ($dayActivities as $act) {
-            $label = $act->catatan ?: ($act->jadwalPerawatan?->aturanPerawatan?->nama ?? 'Disiram');
-            $checkedMap[$act->tanaman_ditanam_id][$label] = $act->id;
+            foreach ($checkedRows as $row) {$checkedMap[$row->tanaman_ditanam_id][$row->aktivitas] = true;
+            }
         }
 
-        // Bangun grid kalender (Senin - Minggu)
-        $gridStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
-        $gridEnd = $monthEnd->endOfWeek(CarbonImmutable::SUNDAY);
+        // DATA CATATAN & PENGINGAT PANEN (Dikelompokkan per tanggal beserta nama tanamannya)
+        $harvestByDate = CatatanPanen::with('planting.tanaman')
+            ->whereBetween('tanggal', [
+                $monthStart->copy()->startOfMonth()->toDateString(),$monthStart->copy()->endOfMonth()->toDateString(),
+            ])
+            ->get()
+            ->groupBy(fn ($item) =>$item->tanggal->toDateString());
 
-        $calendarDays = [];
-        for ($cursor = $gridStart; $cursor->lte($gridEnd); $cursor = $cursor->addDay()) {
-            $calendarDays[] = $cursor;
-        }
+        $selectedHarvestNotes = CatatanPanen::with('planting.tanaman')
+            ->whereDate('tanggal', $selectedDate->toDateString())
+            ->latest()
+            ->get();
 
-        return view('jadwal-perawatan.index', [
-            'monthStart' => $monthStart,
-            'selectedDate' => $selectedDate,
-            'calendarDays' => $calendarDays,
-            'plantings' => $plantings,
-            'careTypes' => self::CARE_TYPES,
-            'checkedMap' => $checkedMap,
-            'activityCountByDate' => $activityCountByDate,
-        ]);
+        $activeHarvestReminders = CatatanPanen::with('planting.tanaman')
+            ->where('is_reminder', true)
+            ->where('is_done', false)
+            ->whereDate('tanggal', '<=', now()->addDays(3)->toDateString())
+            ->orderBy('tanggal', 'asc')
+            ->get();
+
+        return view('jadwal-perawatan.index', compact(
+            'monthStart',
+            'selectedDate',
+            'calendarDays',
+            'activityCountByDate',
+            'plantings',
+            'checkedMap',
+            'careTypes',
+            'harvestByDate',
+            'selectedHarvestNotes',
+            'activeHarvestReminders'
+        ));
     }
 
-    public function toggle(Request $request): RedirectResponse
+    public function toggle(Request $request)
     {
-        $data = $request->validate([
-            'tanaman_ditanam_id' => ['required', 'exists:tanaman_ditanam,id'],
-            'tanggal' => ['required', 'date'],
-            'aktivitas' => ['required', 'string', 'max:255'],
+        $validated =$request->validate([
+            'tanaman_ditanam_id' => 'required|integer',
+            'tanggal' => 'required|date',
+            'aktivitas' => 'required|string|max:100',
         ]);
 
-        $planting = TanamanDitanam::with('penanam')->findOrFail($data['tanaman_ditanam_id']);
-        $date = CarbonImmutable::parse($data['tanggal']);
-
-        $existing = AktivitasPerawatan::query()
-            ->where('tanaman_ditanam_id', $planting->id)
-            ->whereDate('performed_at', $date->toDateString())
-            ->where('catatan', $data['aktivitas'])
-            ->first();
-
-        if ($existing) {
-            if ($existing->jadwal_perawatan_id) {
-                JadwalPerawatan::query()
-                    ->whereKey($existing->jadwal_perawatan_id)
-                    ->update(['status' => 'pending']);
-            }
-            $existing->delete();
-            $message = 'Centang "' . $data['aktivitas'] . '" dibatalkan.';
-        } else {
-            // Hubungkan ke jadwal pending di tanggal tersebut jika ada agar "Jadwal selesai" di Dashboard ikut naik
-            $matchingSchedule = JadwalPerawatan::query()
-                ->where('tanaman_ditanam_id', $planting->id)
-                ->whereDate('perawatan_at', $date->toDateString())
-                ->where('status', 'pending')
+        if (DB::getSchemaBuilder()->hasTable('aktivitas_perawatans')) {
+            $existing = DB::table('aktivitas_perawatans')
+                ->where('tanaman_ditanam_id', $validated['tanaman_ditanam_id'])
+                ->whereDate('tanggal', $validated['tanggal'])
+                ->where('aktivitas', $validated['aktivitas'])
                 ->first();
 
-            if ($matchingSchedule) {
-                $matchingSchedule->update(['status' => 'completed']);
-            }
-
-            AktivitasPerawatan::create([
-                'tanaman_ditanam_id' => $planting->id,
-                'jadwal_perawatan_id' => $matchingSchedule?->id,
-                'performed_at' => $date->setTimeFromTimeString(now()->toTimeString()),
-                'nama_pelaksana' => $planting->penanam?->nama,
-                'catatan' => $data['aktivitas'],
-            ]);
-
-            if ($data['aktivitas'] === 'Disiram') {
-                $planting->update([
-                    'sudah_disiram' => true,
-                    'terakhir_disiram_at' => $date->toDateString(),
+            if ($existing) {
+                DB::table('aktivitas_perawatans')->where('id', $existing->id)->delete();
+            } else {
+                DB::table('aktivitas_perawatans')->insert([
+                    'tanaman_ditanam_id' => $validated['tanaman_ditanam_id'],
+                    'tanggal' => $validated['tanggal'],
+                    'aktivitas' => $validated['aktivitas'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
-
-            $message = 'Tercatat: ' . $data['aktivitas'] . ' (' . ($planting->tanaman?->nama ?? 'Tanaman') . ').';
         }
 
-        return redirect()
-            ->route('jadwal-perawatan.index', [
-                'month' => $date->format('Y-m'),
-                'tanggal' => $date->toDateString(),
-            ])
-            ->with('status', $message);
+        return back();
+    }
+
+    public function storeCatatanPanen(Request $request)
+    {
+        $validated =$request->validate([
+            'tanaman_ditanam_id' => 'nullable|integer',
+            'tanggal' => 'required|date',
+            'catatan' => 'required|string|max:255',
+            'is_reminder' => 'nullable|boolean',
+        ]);
+
+        CatatanPanen::create([
+            'tanaman_ditanam_id' => $validated['tanaman_ditanam_id'] ?: null,
+            'tanggal' => $validated['tanggal'],
+            'catatan' => $validated['catatan'],
+            'is_reminder' => $request->boolean('is_reminder'),
+        ]);
+
+        return back()->with('success', 'Jadwal & pengingat panen berhasil disimpan!');
+    }
+
+    public function toggleSelesaiPanen(CatatanPanen $catatan)
+    {
+        $catatan->update(['is_done' => !$catatan->is_done]);
+
+        return back()->with('success', 'Status panen diperbarui.');
+    }
+
+    public function destroyCatatanPanen(CatatanPanen $catatan)
+    {
+        $catatan->delete();
+
+        return back()->with('success', 'Catatan panen dihapus.');
     }
 }

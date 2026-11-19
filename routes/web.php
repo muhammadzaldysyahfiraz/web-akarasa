@@ -23,7 +23,9 @@ Route::get('/login', function () {
     return view('auth.admin-login');
 })->name('login');
 
-Route::get('/admin/login', function () { return view('auth.admin-login'); })->name('admin.login');
+Route::get('/admin/login', function () {
+    return view('auth.admin-login');
+})->name('admin.login');
 
 Route::post('/login', function (Request $request) {
     $credentials = $request->validate([
@@ -56,11 +58,21 @@ Route::get('/tanaman', [TanamanController::class, 'index'])
 Route::get('/tanaman/{tanaman}', [TanamanController::class, 'show'])
     ->name('tanaman.show');
 
+// JADWAL PERAWATAN & CATATAN PANEN
 Route::get('/jadwal-perawatan', [JadwalPerawatanController::class, 'index'])
     ->name('jadwal-perawatan.index');
 
 Route::post('/jadwal-perawatan/toggle', [JadwalPerawatanController::class, 'toggle'])
     ->name('jadwal-perawatan.toggle');
+
+Route::post('/jadwal-perawatan/catatan-panen', [JadwalPerawatanController::class, 'storeCatatanPanen'])
+    ->name('jadwal-perawatan.catatan.store');
+
+Route::patch('/jadwal-perawatan/catatan-panen/{catatan}/selesai', [JadwalPerawatanController::class, 'toggleSelesaiPanen'])
+    ->name('jadwal-perawatan.catatan.toggle');
+
+Route::delete('/jadwal-perawatan/catatan-panen/{catatan}', [JadwalPerawatanController::class, 'destroyCatatanPanen'])
+    ->name('jadwal-perawatan.catatan.destroy');
 
 Route::get('/laporan', LaporanController::class)
     ->name('laporan.index');
@@ -94,9 +106,11 @@ Route::patch(
     [KebunController::class, 'complete']
 )->name('kebun.complete');
 
-Route::post('/kebun/{penanam}/tanaman/{tanamanDitanam}/aktivitas', [KebunController::class, 'quickLog'])->name('kebun.quick-log');
+Route::post('/kebun/{penanam}/tanaman/{tanamanDitanam}/aktivitas', [KebunController::class, 'quickLog'])
+    ->name('kebun.quick-log');
 
-Route::delete('/kebun/{penanam}/aktivitas/{aktivitas}', [KebunController::class, 'cancelActivity'])->name('kebun.activity.cancel');
+Route::delete('/kebun/{penanam}/aktivitas/{aktivitas}', [KebunController::class, 'cancelActivity'])
+    ->name('kebun.activity.cancel');
 
 Route::post('/jadwal-perawatan/{jadwal}/aktivitas', [KebunController::class, 'recordActivity'])
     ->middleware('throttle:10,1')
@@ -106,67 +120,33 @@ Route::post('/jadwal-perawatan/{jadwal}/aktivitas', [KebunController::class, 're
 Route::prefix('admin')
     ->name('admin.')
     ->group(function () {
-
-        // DASHBOARD ADMIN
         Route::get('/', DashboardController::class)
             ->name('dashboard');
 
-        // DAFTAR DATA
         Route::get('/{resource}', [ResourceController::class, 'index'])
-            ->whereIn('resource', [
-                'tanaman',
-                'penamans',
-                'aturan-perawatan',
-            ])
+            ->whereIn('resource', ['tanaman', 'penamans', 'aturan-perawatan'])
             ->name('resources.index');
 
-        // TAMBAH DATA
         Route::get('/{resource}/create', [ResourceController::class, 'create'])
-            ->whereIn('resource', [
-                'tanaman',
-                'penamans',
-                'aturan-perawatan',
-            ])
+            ->whereIn('resource', ['tanaman', 'penamans', 'aturan-perawatan'])
             ->name('resources.create');
 
         Route::post('/{resource}', [ResourceController::class, 'store'])
-            ->whereIn('resource', [
-                'tanaman',
-                'penamans',
-                'aturan-perawatan',
-            ])
+            ->whereIn('resource', ['tanaman', 'penamans', 'aturan-perawatan'])
             ->name('resources.store');
 
-        // EDIT DATA
         Route::get('/{resource}/{id}/edit', [ResourceController::class, 'edit'])
-            ->whereIn('resource', [
-                'tanaman',
-                'penamans',
-                'aturan-perawatan',
-            ])
+            ->whereIn('resource', ['tanaman', 'penamans', 'aturan-perawatan'])
             ->whereNumber('id')
             ->name('resources.edit');
 
-        Route::match(
-            ['PUT', 'PATCH'],
-            '/{resource}/{id}',
-            [ResourceController::class, 'update']
-        )
-            ->whereIn('resource', [
-                'tanaman',
-                'penamans',
-                'aturan-perawatan',
-            ])
+        Route::match(['PUT', 'PATCH'], '/{resource}/{id}', [ResourceController::class, 'update'])
+            ->whereIn('resource', ['tanaman', 'penamans', 'aturan-perawatan'])
             ->whereNumber('id')
             ->name('resources.update');
 
-        // HAPUS DATA
         Route::delete('/{resource}/{id}', [ResourceController::class, 'destroy'])
-            ->whereIn('resource', [
-                'tanaman',
-                'penamans',
-                'aturan-perawatan',
-            ])
+            ->whereIn('resource', ['tanaman', 'penamans', 'aturan-perawatan'])
             ->whereNumber('id')
             ->name('resources.destroy');
     });
@@ -192,8 +172,8 @@ Route::get('/hapus-jahe', function () {
     ]);
 });
 
-Route::post('/admin/logout', function (\Illuminate\Http\Request $request) {
-    \Illuminate\Support\Facades\Auth::logout();
+Route::post('/admin/logout', function (Request $request) {
+    Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
     return redirect()->route('user.dashboard');
